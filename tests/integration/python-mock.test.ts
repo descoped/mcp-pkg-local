@@ -199,6 +199,7 @@ describe('Python Virtual Environment Integration (Mock)', () => {
         // Read the requests package tree
         const result = await readPackageTool({
           packageName: 'requests',
+          includeTree: true,
         });
 
         expect(result.success).toBe(true);
@@ -247,6 +248,7 @@ describe('Python Virtual Environment Integration (Mock)', () => {
         // Read nested file from sqlalchemy
         const treeResult = await readPackageTool({
           packageName: 'sqlalchemy',
+          includeTree: true,
         });
 
         if (treeResult.type === 'tree') {

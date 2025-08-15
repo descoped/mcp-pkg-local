@@ -13,6 +13,8 @@ export class NodeJSScanner extends BaseScanner {
   private projectRoot: string | null = null;
   private nodeModulesPath: string | null = null;
   private packageCache = new Map<string, PackageInfo>();
+  private productionDeps = new Set<string>();
+  private developmentDeps = new Set<string>();
 
   async scan(): Promise<ScanResult> {
     this.log('Starting Node.js environment scan');
@@ -37,6 +39,9 @@ export class NodeJSScanner extends BaseScanner {
     // Get environment info
     const environment = await this.getEnvironmentInfo();
 
+    // Load dependency categories from package.json
+    await this.loadDependencyCategories();
+
     // Scan packages
     const packages = await this.scanPackages();
 
@@ -52,7 +57,8 @@ export class NodeJSScanner extends BaseScanner {
     // Check cache first
     const cached = this.packageCache.get(packageName);
     if (cached) {
-      return cached.location;
+      // Convert relative path back to absolute
+      return join(this.basePath, cached.location);
     }
 
     if (!this.nodeModulesPath) {
@@ -276,6 +282,56 @@ export class NodeJSScanner extends BaseScanner {
     }
   }
 
+  private async loadDependencyCategories(): Promise<void> {
+    if (!this.projectRoot) return;
+    
+    try {
+      const packageJsonPath = join(this.projectRoot, 'package.json');
+      const packageJson = await readFile(packageJsonPath, 'utf-8');
+      const parsed = JSON.parse(packageJson) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      
+      // Load production dependencies
+      if (parsed.dependencies) {
+        for (const dep of Object.keys(parsed.dependencies)) {
+          this.productionDeps.add(dep);
+        }
+      }
+      
+      // Load development dependencies
+      if (parsed.devDependencies) {
+        for (const dep of Object.keys(parsed.devDependencies)) {
+          this.developmentDeps.add(dep);
+        }
+      }
+      
+      this.log(`Loaded ${this.productionDeps.size} production and ${this.developmentDeps.size} development dependencies`);
+    } catch (error) {
+      this.log('Failed to load dependency categories:', error);
+    }
+  }
+
+  private getPackageCategory(packageName: string): 'production' | 'development' | undefined {
+    // Check if it's a @types package - always development
+    if (packageName.startsWith('@types/')) {
+      return 'development';
+    }
+    
+    // Check against loaded dependencies
+    if (this.productionDeps.has(packageName)) {
+      return 'production';
+    }
+    if (this.developmentDeps.has(packageName)) {
+      return 'development';
+    }
+    
+    // If not in either, it might be a transitive dependency
+    // We'll leave it undefined for now
+    return undefined;
+  }
+
   private async extractPackageInfo(packageName: string, packagePath: string): Promise<PackageInfo | null> {
     try {
       const packageJsonPath = join(packagePath, 'package.json');
@@ -287,12 +343,19 @@ export class NodeJSScanner extends BaseScanner {
       const packageJson = await readFile(packageJsonPath, 'utf-8');
       const parsed = JSON.parse(packageJson) as { version?: string };
 
+      // Store relative path from project root
+      const relativePath = packagePath.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
+      
+      // Determine category
+      const category = this.getPackageCategory(packageName);
+      
       return {
         name: packageName,
         version: parsed.version ?? 'unknown',
-        location: packagePath,
+        location: relativePath,
         language: 'javascript',
         packageManager: undefined, // Will be filled by the environment detection
+        category,
       };
     } catch (error) {
       this.log(`Failed to extract info from ${packagePath}:`, error);

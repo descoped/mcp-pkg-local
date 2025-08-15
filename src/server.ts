@@ -49,6 +49,36 @@ export function createServer(): Server {
             description: 'Force rescan even if index exists',
             default: false,
           },
+          filter: {
+            type: 'string',
+            description: 'Regex pattern to filter package names (e.g., "^@types/" or "eslint")',
+          },
+          limit: {
+            type: 'number',
+            description: 'Maximum number of packages to return (default: 50)',
+            default: 50,
+          },
+          summary: {
+            type: 'boolean',
+            description: 'Return only summary counts instead of full package list',
+            default: false,
+          },
+          category: {
+            type: 'string',
+            enum: ['production', 'development', 'all'],
+            description: 'Filter packages by category (production/development/all)',
+            default: 'all',
+          },
+          includeTypes: {
+            type: 'boolean',
+            description: 'Include @types packages in results',
+            default: true,
+          },
+          group: {
+            type: 'string',
+            enum: ['testing', 'building', 'linting', 'typescript', 'framework', 'utility'],
+            description: 'Filter by predefined package group (testing, building, linting, etc.)',
+          },
         },
       },
     },
@@ -65,6 +95,20 @@ export function createServer(): Server {
           filePath: {
             type: 'string',
             description: 'Specific file to read within the package (optional)',
+          },
+          includeTree: {
+            type: 'boolean',
+            description: 'Include full file tree (default: false, only shows main files)',
+            default: false,
+          },
+          maxDepth: {
+            type: 'number',
+            description: 'Maximum depth for file tree traversal (default: 2)',
+            default: 2,
+          },
+          pattern: {
+            type: 'string',
+            description: 'Glob pattern to filter files (e.g., "*.ts", "src/**")',
           },
         },
         required: ['packageName'],

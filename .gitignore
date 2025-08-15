@@ -143,3 +143,7 @@ vite.config.ts.timestamp-*
 **/.DS_Store
 dist/
 /.mcp.json
+
+# mcp-pkg-local cache
+.pkg-local-index.json
+.pkg-local-cache/

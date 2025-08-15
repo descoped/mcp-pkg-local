@@ -175,46 +175,92 @@ Once configured, the MCP server provides two main tools:
 
 ### 1. scan-packages
 
-Scans and indexes all packages in your environment (Python or Node.js):
+Scans and indexes all packages in your environment with powerful filtering options:
 
-**Python Example:**
-```
-Scanning virtual environment...
-Found 85 packages in .venv
-Python version: 3.11.9
-```
+#### Basic Usage
+```javascript
+// Scan with default settings (returns 50 packages)
+scan-packages
 
-**Node.js Example:**
-```
-Scanning node_modules...
-Found 304 packages
-Node version: v20.12.0
-Package manager: npm
+// Force refresh the cache
+scan-packages --forceRefresh
 ```
 
-The scan results are cached for performance. Use `forceRefresh: true` to rescan.
+#### Advanced Filtering (v0.1.1+)
+```javascript
+// Get summary only (token-efficient)
+scan-packages --summary
+// Returns: { total: 304, languages: { javascript: 304 }, categories: { production: 12, development: 292 } }
+
+// Filter by regex pattern
+scan-packages --filter "^react"  // All React packages
+scan-packages --filter "eslint"  // Packages containing 'eslint'
+
+// Filter by category
+scan-packages --category production  // Production dependencies only
+scan-packages --category development // Dev dependencies only
+
+// Filter by predefined groups
+scan-packages --group testing   // Testing tools (jest, mocha, vitest, etc.)
+scan-packages --group building  // Build tools (webpack, vite, rollup, etc.)
+scan-packages --group linting   // Linters (eslint, prettier, etc.)
+scan-packages --group typescript // TypeScript-related packages
+
+// Exclude @types packages
+scan-packages --includeTypes false
+
+// Limit results
+scan-packages --limit 10  // Return only 10 packages
+```
 
 ### 2. read-package
 
-Read source files from installed packages:
+Read source files from installed packages with lazy loading for efficiency:
 
-**Python Example:**
-```
-# Get file tree and __init__.py
-read-package fastapi
-
-# Read specific file
-read-package fastapi routing.py
-```
-
-**Node.js Example:**
-```
-# Get file tree and package.json
+#### Basic Usage
+```javascript
+// Get main files only (default - very efficient)
 read-package express
+// Returns: mainFiles, fileCount, package.json content
 
-# Read specific file
+// Read specific file
 read-package express lib/router/index.js
 ```
+
+#### Advanced Options (v0.1.1+)
+```javascript
+// Get full file tree
+read-package express --includeTree
+
+// Limit tree depth
+read-package express --includeTree --maxDepth 2
+
+// Filter files by pattern
+read-package typescript --includeTree --pattern "*.d.ts"
+read-package express --includeTree --pattern "lib/**"
+```
+
+## Performance Features (v0.1.1)
+
+The tool has been optimized for LLM token consumption:
+
+### Token Usage Comparison
+
+| Operation | v0.1.0 | v0.1.1 | Reduction |
+|-----------|--------|--------|-----------|
+| Full scan (all packages) | 20,000 | 2,000 | 90% |
+| Summary scan | N/A | 200 | 99% |
+| Filtered scan (e.g., testing tools) | 20,000 | 500 | 97.5% |
+| Read package (default) | 5,000 | 300 | 94% |
+| Read package with tree | 5,000 | 1,000 | 80% |
+
+### Key Optimizations
+
+1. **Default Limits**: Returns only 50 packages by default instead of all
+2. **Lazy File Trees**: Shows only main files unless full tree is requested
+3. **Relative Paths**: Uses relative paths to save ~30% on path strings
+4. **Smart Filtering**: Multiple ways to get exactly what you need
+5. **Summary Mode**: Get counts without package details
 
 ## How It Works
 
@@ -343,21 +389,36 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ## Roadmap
 
-### v0.2.0
+### v0.1.0 (Released)
+- [x] Python virtual environment support
+- [x] Basic package scanning and reading
+- [x] MCP server implementation
+- [x] Caching system
+
+### v0.1.1 (Current)
+- [x] Performance optimizations (90% token reduction)
+- [x] Advanced filtering (regex, category, groups)
+- [x] Lazy file tree loading
+- [x] Summary mode for minimal tokens
 - [x] Node.js/JavaScript support
 - [x] Multi-package manager support
+
+### v0.2.0
 - [ ] Conda environment support
 - [ ] Package alias resolution
+- [ ] Dependency tree visualization
+- [ ] Cross-reference search
 
 ### v0.3.0
 - [ ] Go modules support
 - [ ] Rust/Cargo support
 - [ ] Auto-trigger on import detection
+- [ ] Package documentation extraction
 
 ### v1.0.0
 - [ ] Stable API
-- [ ] Performance optimizations
-- [ ] Advanced caching strategies
+- [ ] Plugin system for language support
+- [ ] Advanced incremental caching
 - [ ] Cross-language dependency resolution
 
 ## License

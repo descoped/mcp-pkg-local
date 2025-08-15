@@ -87,7 +87,7 @@ describe('Node.js Environment Integration', () => {
 
   describe('scan-packages tool', () => {
     it('should scan Node.js packages successfully', async () => {
-      const result = await scanPackagesTool({ forceRefresh: true });
+      const result = await scanPackagesTool({ forceRefresh: true, limit: 500 }); // Use higher limit for testing
       
       expect(result.success).toBe(true);
       expect(result.environment.type).toMatch(/npm|pnpm|yarn/);

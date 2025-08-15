@@ -55,7 +55,8 @@ export class PythonScanner extends BaseScanner {
     // Check cache first
     const cached = this.packageCache.get(packageName);
     if (cached) {
-      return cached.location;
+      // Convert relative path back to absolute
+      return join(this.basePath, cached.location);
     }
 
     // Ensure we have site-packages path
@@ -326,10 +327,12 @@ export class PythonScanner extends BaseScanner {
       const initPath = join(entryPath, '__init__.py');
       if (await this.pathExists(initPath)) {
         // If we don't already have info about this package
+        // Store relative path from project root
+        const relativePath = entryPath.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
         packages[entry] ??= {
             name: entry,
             version: 'unknown',
-            location: entryPath,
+            location: relativePath,
             language: 'python',
             packageManager: 'pip',
           };
@@ -361,10 +364,13 @@ export class PythonScanner extends BaseScanner {
       const packageLoc = await this.getPackageLocation(name);
       const location = packageLoc ?? distInfoPath;
 
+      // Store relative path from project root
+      const relativeLoc = location.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
+      
       return { 
         name, 
         version, 
-        location,
+        location: relativeLoc,
         language: 'python' as const,
         packageManager: 'pip'
       };

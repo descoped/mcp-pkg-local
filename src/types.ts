@@ -7,6 +7,7 @@ export type PackageInfo = {
   location: string;
   language: 'python' | 'javascript';
   packageManager?: string | undefined;
+  category?: 'production' | 'development' | undefined;
 };
 
 // Environment information
@@ -24,6 +25,12 @@ export type ScanResult = {
   packages: Record<string, PackageInfo>;
   environment: EnvironmentInfo;
   scanTime: string;
+  summary?: {
+    total: number;
+    filtered: number;
+    languages: Record<string, number>;
+    categories?: Record<string, number>;
+  };
 };
 
 // Read package result
@@ -35,6 +42,9 @@ export type ReadPackageResult =
       version: string;
       initContent?: string;
       fileTree: string[];
+      fileCount?: number;
+      mainFiles?: string[];
+      truncated?: boolean;
     }
   | {
       type: 'file';
@@ -75,6 +85,12 @@ export type IndexFile = z.infer<typeof IndexFileSchema>;
 // Tool parameters
 export const ScanPackagesParamsSchema = z.object({
   forceRefresh: z.boolean().optional().default(false),
+  filter: z.string().optional().describe('Regex pattern to filter package names'),
+  limit: z.number().optional().default(50).describe('Maximum number of packages to return'),
+  summary: z.boolean().optional().default(false).describe('Return only summary counts'),
+  category: z.enum(['production', 'development', 'all']).optional().default('all').describe('Filter by package category'),
+  includeTypes: z.boolean().optional().default(true).describe('Include @types packages'),
+  group: z.enum(['testing', 'building', 'linting', 'typescript', 'framework', 'utility']).optional().describe('Filter by predefined package group'),
 });
 
 export type ScanPackagesParams = z.infer<typeof ScanPackagesParamsSchema>;
@@ -82,6 +98,9 @@ export type ScanPackagesParams = z.infer<typeof ScanPackagesParamsSchema>;
 export const ReadPackageParamsSchema = z.object({
   packageName: z.string().min(1),
   filePath: z.string().optional(),
+  includeTree: z.boolean().optional().default(false).describe('Include full file tree (default: false, only main files)'),
+  maxDepth: z.number().optional().default(2).describe('Maximum depth for file tree traversal'),
+  pattern: z.string().optional().describe('Glob pattern to filter files (e.g., "*.ts", "src/**")'),
 });
 
 export type ReadPackageParams = z.infer<typeof ReadPackageParamsSchema>;

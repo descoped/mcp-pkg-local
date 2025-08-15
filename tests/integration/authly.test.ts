@@ -7,16 +7,16 @@ import { promises as fs } from 'node:fs';
 
 /**
  * LOCAL DEVELOPMENT TEST ONLY - DISABLED BY DEFAULT
- * 
+ *
  * This test file is kept for local development purposes only.
  * It tests against an external Python virtual environment that may exist locally.
- * 
+ *
  * This test is ALWAYS SKIPPED in normal test runs to keep the project self-contained
  * and autonomous with no external dependencies.
- * 
+ *
  * To manually run this test during local development:
  * TEST_AUTHLY=1 npm test
- * 
+ *
  * For production testing, use python-mock.test.ts which provides
  * the same test coverage with self-contained mock environments.
  */
