@@ -1,6 +1,6 @@
 {
   "name": "@descoped/mcp-pkg-local",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "An MCP tool that scans and indexes local dependency source code, enabling LLMs to understand locally installed package contracts",
   "type": "module",
   "main": "./dist/index.js",
