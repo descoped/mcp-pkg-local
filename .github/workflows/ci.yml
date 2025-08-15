@@ -5,6 +5,10 @@ on:
     branches:
       - master
       - 'feature/**'
+    tags-ignore:
+      - '**'
+    paths-ignore:
+      - '**.md'
   pull_request:
     branches:
       - master
@@ -12,22 +16,22 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
           cache: 'npm'
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -35,25 +39,25 @@ jobs:
           else
             npm install
           fi
-      
+
       - name: Create test Python environment
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install requests flask pydantic sqlalchemy
-      
+
       - name: Lint
         run: npm run lint
-      
+
       - name: Type check
         run: npm run typecheck
-      
+
       - name: Build
         run: npm run build
-      
+
       - name: Test
         run: npm test
-      
+
       - name: Verify build excludes
         run: |
           # Ensure CLAUDE.md and ai_docs are not in dist
