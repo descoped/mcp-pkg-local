@@ -22,8 +22,8 @@ export async function readPackageTool(
     // Try cache first - get environment info from scanner
     const scanner = await detectAndCreateScanner();
     const environment = await scanner.getEnvironmentInfo();
-    const cached = await cache.load(environment);
-    
+    const cached = cache.load(environment);
+
     if (cached?.packages[packageName]) {
       packageLocation = cached.packages[packageName].location;
       packageVersion = cached.packages[packageName].version;

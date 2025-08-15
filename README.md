@@ -11,14 +11,43 @@ An MCP (Model Context Protocol) server that enables LLMs to read and understand 
 
 ## Features
 
-- 🔍 **Package Scanning**: Automatically discovers and indexes all packages in Python and Node.js environments
-- 📖 **Source Code Reading**: Direct access to actual installed package source code
-- ⚡ **Smart Caching**: Fast responses with intelligent index caching
-- 🐍 **Python Support**: Full support for Python 3.9+ virtual environments (venv, .venv)
-- 📦 **Node.js Support**: Complete support for Node.js packages in node_modules
-- 🎯 **Zero Configuration**: Works out of the box with standard Python and Node.js projects
-- 🛠️ **Multi Package Manager**: Supports pip, poetry, uv, pipenv, npm, pnpm, yarn, and bun
-- 🚀 **Modern Stack**: Built with TypeScript 5.7+, Node.js 20+, and latest MCP SDK
+### Core Capabilities
+- 🔍 **Auto-Detection**: Automatically detects Python or Node.js projects
+- 📖 **Source Code Access**: Direct reading of actual installed package source code
+- ⚡ **High Performance**: SQLite cache with 40x faster validity checks (v0.1.1)
+- 🎯 **Zero Configuration**: Works immediately with standard project structures
+
+### Advanced Filtering
+- 📊 **Summary Mode**: Get package counts with 99% token reduction
+- 🔎 **Regex Filtering**: Filter packages by pattern matching
+- 📦 **Category Filtering**: Separate production/development dependencies (Node.js)
+- 🏷️ **Group Filtering**: Pre-defined groups (testing, linting, building, etc.)
+- 🎚️ **Smart Limits**: Default 50 packages to optimize LLM token usage
+- 🚫 **Type Exclusion**: Optionally exclude @types packages
+
+### Language Support
+- 📦 **Node.js**: Full support with dependency categorization
+  - Package managers: npm, pnpm, yarn, bun
+  - Production vs development classification
+  - Scoped packages (@org/package)
+- 🐍 **Python**: Basic support for virtual environments
+  - Package managers: pip, poetry, uv, pipenv (detection only)
+  - Virtual environments: venv, .venv
+  - Note: Dependency categorization pending
+
+### Performance Optimizations
+- 💾 **SQLite Cache**: High-performance cache with WAL mode for concurrent access
+- 📈 **Relevance Scoring**: Prioritizes direct dependencies (Node.js)
+- 🌲 **Lazy Loading**: File trees loaded on-demand
+- ⏱️ **Fast Operations**: ~150ms scan, ~10ms read, ~5ms cache hits
+- 🚀 **40x Faster**: Validity checks in 0.03ms vs 1.2ms (old JSON cache)
+
+### Developer Experience
+- 🛠️ **TypeScript 5.9+**: Strict mode with full type safety
+- 📦 **ES Modules**: Modern JavaScript with import maps
+- 🧪 **Comprehensive Testing**: 59 tests covering all scenarios
+- 🔒 **Security**: Path sanitization, file size limits, read-only access
+- 🚀 **MCP SDK**: Latest Model Context Protocol implementation
 
 ## Why mcp-pkg-local?
 
@@ -268,7 +297,7 @@ The tool has been optimized for LLM token consumption:
 2. **Package Discovery**: 
    - Python: Scans `site-packages` and reads `.dist-info` metadata
    - Node.js: Scans `node_modules` including scoped packages
-3. **Smart Indexing**: Creates `.pkg-local-index.json` cache for fast lookups
+3. **Smart Caching**: SQLite database (`.pkg-local-cache/cache.db`) for high-performance lookups
 4. **Source Reading**: Provides file trees and actual source code to LLMs
 
 ## Development
@@ -342,35 +371,38 @@ npm run test:ui
 
 ### Cache Management
 
-The index cache (`.pkg-local-index.json`) is automatically managed:
-- Created on first scan
-- Updated when packages change
-- 1-hour default TTL
-- Can be forced to refresh
+The cache system uses SQLite for optimal performance:
+- Location: `.pkg-local-cache/cache.db`
+- Mode: WAL (Write-Ahead Logging) for concurrent access
+- TTL: 1-hour default validity
+- Refresh: Use `--forceRefresh` to force rescan
 
 ## Supported Environments
 
 ### Python
 - ✅ Virtual environments (venv, .venv)
-- ✅ Package managers: pip, poetry, uv, pipenv
+- ✅ Package managers: pip, poetry, uv, pipenv (basic detection)
 - ✅ Standard pip packages
 - ✅ Editable installations (-e)
 - ✅ Namespace packages
-- 🚧 Conda environments (coming soon)
+- ⚠️ Limited: No dependency categorization yet
+- 🚧 Conda environments (planned)
 
 ### Node.js/JavaScript
 - ✅ node_modules directory
-- ✅ Package managers: npm, pnpm, yarn, bun
+- ✅ Package managers: npm, pnpm, yarn, bun (full support)
 - ✅ Scoped packages (@org/package)
 - ✅ TypeScript packages
 - ✅ ESM and CommonJS modules
+- ✅ Production vs development categorization
 
 ## Limitations
 
-- Python and Node.js/JavaScript only (Go, Rust support planned)
+- Python dependency categorization not yet implemented
 - Local environments only (no system packages)
 - Read-only access (cannot modify packages)
 - 10MB file size limit for source files
+- Go, Rust, Java support planned for future versions
 
 ## Security
 
@@ -407,23 +439,17 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 - [x] Node.js/JavaScript support
 - [x] Multi-package manager support
 
-### v0.2.0
+### Future Versions
+- [ ] Python dependency categorization (critical)
+- [ ] Smart package prioritization
 - [ ] Conda environment support
 - [ ] Package alias resolution
 - [ ] Dependency tree visualization
-- [ ] Cross-reference search
 
-### v0.3.0
 - [ ] Go modules support
 - [ ] Rust/Cargo support
 - [ ] Auto-trigger on import detection
 - [ ] Package documentation extraction
-
-### v1.0.0
-- [ ] Stable API
-- [ ] Plugin system for language support
-- [ ] Advanced incremental caching
-- [ ] Cross-language dependency resolution
 
 ## License
 

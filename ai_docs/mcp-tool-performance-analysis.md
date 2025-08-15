@@ -102,15 +102,20 @@ The v0.1.1 performance optimizations are working excellently:
 - **94% reduction** in lazy loading (5K → 300 tokens)
 
 ### Cache Performance
-- **Partitioned cache**: Environment-specific caching
+- **SQLite cache**: High-performance database-backed caching
+- **40x faster validity checks**: 0.03ms vs 1.2ms for JSON
 - **Instant cache hits**: No re-scanning needed
 - **Smart invalidation**: 1-hour TTL with validity timestamps
+- **WAL mode**: Optimized for concurrent reads
 
-### Response Times
+### Response Times (with SQLite)
 - **scan-packages (50 packages)**: ~150ms
 - **scan-packages --summary**: ~100ms
 - **read-package (lazy)**: ~10ms
-- **Cache hits**: ~50ms
+- **Cache hits**: ~5ms (SQLite) vs ~50ms (JSON)
+- **Write operations**: ~14.5ms per operation
+- **Read operations**: ~4.8ms per operation
+- **Validity checks**: ~0.03ms per check
 
 ## Lessons Learned
 

@@ -41,7 +41,7 @@ This document provides a comprehensive deep-dive analysis of the mcp-pkg-local t
 │  │    Cache System     │  │   Scanner Factory   │  │ File System │  │
 │  │                     │  │                     │  │   Utils     │  │
 │  │ ┌─────────────────┐ │  │ ┌─────────────────┐ │  │             │  │
-│  │ │ IndexCache      │ │  │ │ detectAndCreate │ │  │ ┌─────────┐ │  │
+│  │ │ UnifiedCache    │ │  │ │ detectAndCreate │ │  │ ┌─────────┐ │  │
 │  │ │ (Legacy)        │ │  │ │    Scanner()    │ │  │ │ readFile│ │  │
 │  │ └─────────────────┘ │  │ └─────────────────┘ │  │ │WithSize │ │  │
 │  │ ┌─────────────────┐ │  │                     │  │ │  Check  │ │  │
@@ -101,7 +101,7 @@ This document provides a comprehensive deep-dive analysis of the mcp-pkg-local t
 │     ──────────────────▶ │           │────▶ │ Try Cache First     │  │
 │                         │   Yes     │     │                     │  │
 │                         │           │     │ 1. PartitionedCache │  │
-│                         ▼           │     │ 2. IndexCache       │  │
+│                         ▼           │     │ 2. UnifiedCache     │  │
 │                   ┌─────────────┐   │     │ 3. Fresh Scan       │  │
 │                   │ Fresh Scan  │   │     └─────────────────────┘  │
 │                   │   Always    │   │                              │
@@ -180,7 +180,7 @@ This document provides a comprehensive deep-dive analysis of the mcp-pkg-local t
 │                      Cache Update                                  │
 │                                                                     │
 │  IF fresh scan performed:                                           │
-│  • Update IndexCache (legacy)                                       │
+│  • Update UnifiedCache (SQLite/JSON fallback)                       │
 │  • Update PartitionedCache (modern)                                │
 │  • Log operation results                                            │
 └─────────────────────────────────────────────────────────────────────┘
@@ -196,13 +196,13 @@ The caching system uses a sophisticated two-tier approach with migration capabil
 │                                                                     │
 │  ┌─────────────────────┐              ┌─────────────────────┐       │
 │  │   Legacy Cache      │              │  Modern Cache       │       │
-│  │   (IndexCache)      │◄─Migration───┤ (PartitionedCache)  │       │
+│  │    (SQLiteCache)    │◄─Fallback────┤ (PartitionedCache)  │       │
 │  │                     │              │                     │       │
 │  │ File: .pkg-local-   │              │ Dir: .pkg-local-    │       │
-│  │       index.json    │              │      cache/         │       │
+│  │    cache.db (SQLite)│              │      cache/         │       │
 │  │                     │              │                     │       │
 │  │ ┌─────────────────┐ │              │ ┌─────────────────┐ │       │
-│  │ │Single JSON file │ │              │ │Environment-based│ │       │
+│  │ │SQLite database │ │              │ │Environment-based│ │       │
 │  │ │All environments │ │              │ │partitioned files│ │       │
 │  │ │Version: 1.1.0   │ │              │ │+ metadata       │ │       │
 │  │ └─────────────────┘ │              │ └─────────────────┘ │       │
@@ -221,7 +221,7 @@ Cache Decision Flow:
          │ No                                 │
          ▼                                    ▼
 ┌─────────────────────────────────────┐  ┌─────────────────┐
-│ IndexCache exists & not stale?      │  │ Partition stale?│
+│ SQLite cache valid?                 │  │ Partition stale?│
 └─────────────────────────────────────┘  └─────────────────┘
          │ Yes                                    │ No
          ▼                                        ▼
@@ -239,10 +239,12 @@ Cache Decision Flow:
 ```
 PartitionedCache Structure:
 .pkg-local-cache/
-├── meta.json                    # Global metadata
-├── venv_path_to_project.json    # Python environment partition
-├── npm_path_to_project.json     # npm environment partition
-└── pnpm_path_to_project.json    # pnpm environment partition
+.pkg-local-cache/
+├── cache.db                     # SQLite database (primary)
+├── meta.json                    # Fallback metadata (if SQLite unavailable)
+├── venv_path_to_project.json    # Python environment partition (fallback)
+├── npm_path_to_project.json     # npm environment partition (fallback)
+└── pnpm_path_to_project.json    # pnpm environment partition (fallback)
 
 Partition Key Generation:
 environment.type + "-" + sanitized_path
@@ -294,7 +296,7 @@ Partition Content:
 │                                                                     │
 │  Try Cache First:                                                   │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ IndexCache.read() ──▶ packages[packageName]?.location       │    │
+│  │ UnifiedCache.load() ──▶ packages[packageName]?.location     │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                          │                                          │
 │                          ▼                                          │
@@ -772,7 +774,7 @@ Error Response Format:
 
 ### Recovery Strategies
 
-1. **Cache Recovery**: Fall back from PartitionedCache to IndexCache to fresh scan
+1. **Cache Recovery**: Fall back from SQLiteCache to PartitionedCache to fresh scan
 2. **Scanner Fallback**: Default to PythonScanner if no specific scanner matches
 3. **Package Resolution**: Try multiple name variations for package location
 4. **File Safety**: Size and binary file checks before reading

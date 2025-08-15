@@ -3,6 +3,56 @@
 **Status**: 📝 IN PROGRESS - Tracking incomplete tasks  
 **Date**: 2025-08-15  
 **Note**: This document contains only the incomplete tasks extracted from the original TODO. Completed tasks are preserved in history.
+**Updated**: 2025-08-15 - Added prioritized implementation roadmap based on ai_docs analysis
+
+## Prioritized Implementation Roadmap
+
+### Priority 1: Python Parity (Critical)
+**Reference**: [python-implementation-gaps.md](./python-implementation-gaps.md)
+- [ ] **Parse Python dependency files** - requirements.txt, pyproject.toml, Pipfile
+- [ ] **Implement Python package categorization** - production vs development
+- [ ] **Add Python package prioritization** - direct vs transitive dependencies
+- [ ] **Create Python performance tests** - ensure same token efficiency as Node.js
+
+### Priority 2: Smart Package Prioritization (High)
+**Reference**: [smart-package-prioritization-plan.md](./smart-package-prioritization-plan.md)
+- [ ] **Implement relevance scoring algorithm** - prioritize project dependencies
+- [ ] **Add dependency parsing for all project files** - comprehensive project understanding
+- [ ] **Add relevanceOnly and includeTransitive parameters** - enhanced filtering
+- [ ] **Update summary mode** with dependency source breakdown
+
+### Priority 3: MCP SDK Guardrails (High)
+**Reference**: [mcp-sdk-enhancement-opportunities.md](./mcp-sdk-enhancement-opportunities.md)
+- [ ] **Phase 1: Safety Guardrails** (1-2 days)
+  - [ ] Add read-only validation to all operations
+  - [ ] Implement resource-based access control
+  - [ ] Enhanced error messages with clear explanations
+  - [ ] Add operation logging for transparency
+- [ ] **Phase 2: Guided Workflows** (2-3 days)
+  - [ ] Context-aware prompts for guided usage
+  - [ ] Smart suggestions based on project context
+  - [ ] Workflow templates for common use cases
+
+### Priority 4: Testing & Documentation (Medium)
+- [ ] **Testing Suite Completion**
+  - [ ] Write unit tests for scanner base class
+  - [ ] Test Python scanner with mock file systems
+  - [ ] Add performance benchmarks for scanning
+  - [ ] Test edge cases: empty venv, corrupted packages, permissions
+- [ ] **Documentation Updates**
+  - [ ] Update README with Python limitations
+  - [ ] Create performance tuning guide
+  - [ ] Document smart prioritization features
+  - [ ] Add architecture diagrams
+
+### Priority 5: Performance Monitoring (Low)
+**Reference**: [mcp-tool-performance-analysis.md](./mcp-tool-performance-analysis.md)
+- [ ] Add performance monitoring utilities
+- [ ] Create benchmark suite for all operations
+- [ ] Document performance best practices
+- [ ] Monitor real-world usage patterns
+
+## Original Phase Structure (for reference)
 
 ## Phase 4: MCP Tools Implementation
 ### 6. Implement read-package MCP tool
@@ -81,3 +131,41 @@
 - Core functionality is complete and working
 - Focus should be on testing, documentation, and performance benchmarking
 - Node.js support has been fully implemented in v0.1.0
+
+## Key Insights from Analysis
+
+### Performance Achievements (v0.1.1)
+**Reference**: [sqlite-cache-documentation-update.md](./sqlite-cache-documentation-update.md)
+- SQLite cache provides 40x faster validity checks
+- Response times: scan ~150ms, read ~10ms, cache hits ~5ms
+- 90% token reduction achieved for Node.js projects
+- WAL mode and prepared statements optimized
+
+### Critical Gaps
+**Reference**: [python-implementation-gaps.md](./python-implementation-gaps.md)
+- Python implementation significantly behind Node.js
+- No dependency categorization or smart prioritization for Python
+- Category filtering non-functional for Python projects
+- "Dogfooding bias" led to Node.js-centric optimizations
+
+### Architecture Strengths
+**Reference**: [mcp-tools-architecture-analysis.md](./mcp-tools-architecture-analysis.md)
+- Robust two-tier cache system with automatic migration
+- Extensible scanner factory pattern ready for expansion
+- Comprehensive error handling with actionable suggestions
+- Security measures including path sanitization
+
+### MCP Best Practices
+**Reference**: [mcp-tool-performance-analysis.md](./mcp-tool-performance-analysis.md)
+- Direct MCP calls 12,000x faster than Task tool for simple operations
+- Always quote scoped package names ("@package/name")
+- Use summary mode for quick environment overview
+- Reserve Task tool for genuinely complex workflows
+
+## Recommended Path Forward
+
+1. **Immediate**: Fix Python parity to match Node.js capabilities
+2. **Next**: Implement smart package prioritization for both languages
+3. **Then**: Add MCP SDK guardrails for safety and UX
+4. **Ongoing**: Complete test coverage and documentation
+5. **Future**: Monitor performance and usage patterns for optimization

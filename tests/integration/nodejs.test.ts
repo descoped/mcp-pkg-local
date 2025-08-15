@@ -112,7 +112,7 @@ describe('Node.js Environment Integration', () => {
     it('should read package file tree', async () => {
       // First scan to ensure cache with higher limit to include the test package
       const scanResult = await scanPackagesTool({ forceRefresh: true, limit: 500 });
-      
+
       // Get the first available package from scan
       const packageName = Object.keys(scanResult.packages)[0];
       if (!packageName) {
@@ -144,9 +144,10 @@ describe('Node.js Environment Integration', () => {
       const scanResult = await scanPackagesTool({ forceRefresh: true, limit: 500 });
 
       // Get a package that likely has package.json
-      const packageName = Object.keys(scanResult.packages).find(name => 
-        !name.startsWith('@types/')) || Object.keys(scanResult.packages)[0];
-      
+      const packageName =
+        Object.keys(scanResult.packages).find((name) => !name.startsWith('@types/')) ??
+        Object.keys(scanResult.packages)[0];
+
       if (!packageName) {
         console.warn('No packages found in scan, skipping test');
         return;

@@ -18,6 +18,7 @@
       "#tools/read-package": ["./src/tools/read-package.ts", "./src/tools/read-package"],
       "#tools/*": ["./src/tools/*"],
       "#utils/cache": ["./src/utils/cache.ts", "./src/utils/cache"],
+      "#utils/sqlite-cache": ["./src/utils/sqlite-cache.ts", "./src/utils/sqlite-cache"],
       "#utils/fs": ["./src/utils/fs.ts", "./src/utils/fs"],
       "#utils/scanner-factory": ["./src/utils/scanner-factory.ts", "./src/utils/scanner-factory"],
       "#utils/package-groups": ["./src/utils/package-groups.ts", "./src/utils/package-groups"],

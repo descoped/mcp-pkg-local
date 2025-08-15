@@ -183,7 +183,21 @@ describe('Python Virtual Environment Integration (Mock)', () => {
         // Second call without forceRefresh should use cache
         const result2 = await scanPackagesTool({ forceRefresh: false });
         expect(result2.success).toBe(true);
-        expect(result2.packages).toEqual(result1.packages);
+        
+        // SQLite cache normalizes undefined booleans to false, so we normalize for comparison
+        const normalizePackages = (packages: typeof result1.packages): typeof result1.packages => {
+          const normalized: typeof result1.packages = {};
+          for (const [name, pkg] of Object.entries(packages)) {
+            normalized[name] = {
+              ...pkg,
+              hasTypes: pkg.hasTypes ?? false,
+              isDirectDependency: pkg.isDirectDependency ?? false,
+            };
+          }
+          return normalized;
+        };
+        
+        expect(normalizePackages(result2.packages)).toEqual(normalizePackages(result1.packages));
       } finally {
         process.chdir(originalCwd);
       }

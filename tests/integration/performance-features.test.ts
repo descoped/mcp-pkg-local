@@ -134,12 +134,14 @@ describe('Performance Features (v0.1.1)', () => {
   describe('read-package lazy loading features', () => {
     // Get a test package from the scan to use
     let testPackage: string | undefined = 'typescript';
-    
+
     beforeAll(async () => {
       const scanResult = await scanPackagesTool({ limit: 100 });
       // Try to find typescript, or use first available package
-      testPackage = Object.keys(scanResult.packages).find(name => 
-        name === 'typescript' || !name.startsWith('@types/')) || Object.keys(scanResult.packages)[0];
+      testPackage =
+        Object.keys(scanResult.packages).find(
+          (name) => name === 'typescript' || !name.startsWith('@types/'),
+        ) ?? Object.keys(scanResult.packages)[0];
     });
 
     it('should return only main files by default (lazy loading)', async () => {
@@ -147,7 +149,7 @@ describe('Performance Features (v0.1.1)', () => {
         console.warn('No test package available, skipping test');
         return;
       }
-      
+
       const result = await readPackageTool({ packageName: testPackage });
 
       expect(result.success).toBe(true);
@@ -173,7 +175,7 @@ describe('Performance Features (v0.1.1)', () => {
         console.warn('No test package available, skipping test');
         return;
       }
-      
+
       const result = await readPackageTool({
         packageName: testPackage,
         includeTree: true,
@@ -223,7 +225,7 @@ describe('Performance Features (v0.1.1)', () => {
         console.warn('No test package available, skipping test');
         return;
       }
-      
+
       const result = await readPackageTool({
         packageName: testPackage,
         includeTree: true,

@@ -21,22 +21,22 @@ export async function scanPackagesTool(
 
   if (!validated.forceRefresh) {
     // Try to load from cache
-    const cached = await cache.load(environment);
-    if (cached && !(await cache.isStale(environment))) {
+    const cached = cache.load(environment);
+    if (cached && !cache.isStale(environment)) {
       console.error('[CACHE] Using cached package index');
       fullResult = cached;
     } else {
       // Cache is stale or doesn't exist, do fresh scan
       console.error('[SCAN] Starting fresh package scan');
       fullResult = await scanner.scan();
-      await cache.save(fullResult);
+      cache.save(fullResult);
       console.error(`[SCAN] Indexed ${Object.keys(fullResult.packages).length} packages`);
     }
   } else {
     // Force refresh - always do fresh scan
     console.error('[SCAN] Force refresh: starting fresh package scan');
     fullResult = await scanner.scan();
-    await cache.save(fullResult);
+    cache.save(fullResult);
     console.error(`[SCAN] Indexed ${Object.keys(fullResult.packages).length} packages`);
   }
 

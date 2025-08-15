@@ -3,6 +3,7 @@
 **Date**: 2025-08-15  
 **Status**: Planning phase - awaiting user approval  
 **Context**: Enhancement request for intelligent package ranking
+**Note**: v0.1.1 already implemented SQLite cache with excellent performance (40x faster validity checks)
 
 ## Problem Statement
 
