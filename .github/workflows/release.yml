@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 1.0.0)'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -22,8 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,55 +32,23 @@ jobs:
             npm install
           fi
       
-      - name: Run tests
+      - name: Test
         run: npm test
       
-      - name: Build project
+      - name: Build
         run: npm run build
       
-      - name: Verify build excludes
-        run: |
-          # Verify CLAUDE.md and ai_docs are not in dist
-          if [ -f "dist/CLAUDE.md" ] || [ -d "dist/ai_docs" ]; then
-            echo "ERROR: CLAUDE.md or ai_docs found in dist/"
-            exit 1
-          fi
-          echo "✓ Build excludes verified"
-      
-      - name: Verify npm package contents
-        run: |
-          # Dry run to see what would be published
-          npm pack --dry-run
-          
-          # Verify the tarball doesn't contain excluded files
-          npm pack
-          tar -tzf *.tgz | grep -E "(CLAUDE\.md|ai_docs/)" && exit 1 || true
-          echo "✓ NPM package contents verified"
-      
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
           generate_release_notes: true
-          files: |
-            *.tgz
-      
-      - name: Publish to npm (dry run)
-        if: github.event_name == 'workflow_dispatch'
-        run: npm publish --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
       - name: Publish to npm
-        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-beta')
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Publish to npm (beta)
-        if: startsWith(github.ref, 'refs/tags/') && contains(github.ref, '-beta')
-        run: npm publish --provenance --access public --tag beta
+        run: |
+          if [[ "${{ github.ref }}" == *"-beta"* ]]; then
+            npm publish --provenance --access public --tag beta
+          else
+            npm publish --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

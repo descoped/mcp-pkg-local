@@ -55,6 +55,19 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.js', '*.config.ts'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      '*.config.js',
+      '*.config.ts',
+      '.venv/**',
+      'venv/**',
+      '__pycache__/**',
+      '*.pyc',
+      '.pkg-local-index.json',
+      'ai_docs/**',
+      '.github/**'
+    ],
   },
 ];

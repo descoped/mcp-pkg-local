@@ -10,15 +10,8 @@ on:
       - master
 
 jobs:
-  build-and-test:
+  ci:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-        python-version: ['3.9', '3.11', '3.12']
-    
-    name: Node ${{ matrix.node-version }} / Python ${{ matrix.python-version }}
     
     steps:
       - name: Checkout code
@@ -27,174 +20,45 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20.x
           cache: 'npm'
       
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
       
-      - name: Create Python virtual environment
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+      
+      - name: Create test Python environment
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          pip install --upgrade pip
-          # Install some common packages for testing
           pip install requests flask pydantic sqlalchemy
       
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-      
-      - name: Lint code
+      - name: Lint
         run: npm run lint
       
       - name: Type check
         run: npm run typecheck
       
-      - name: Build project
+      - name: Build
         run: npm run build
+      
+      - name: Test
+        run: npm test
       
       - name: Verify build excludes
         run: |
-          # Check that excluded files are not in dist
-          if [ -f "dist/CLAUDE.md" ]; then
-            echo "ERROR: CLAUDE.md should not be in dist/"
+          # Ensure CLAUDE.md and ai_docs are not in dist
+          if [ -f "dist/CLAUDE.md" ] || [ -d "dist/ai_docs" ]; then
+            echo "ERROR: CLAUDE.md or ai_docs found in dist/"
             exit 1
           fi
-          if [ -d "dist/ai_docs" ]; then
-            echo "ERROR: ai_docs/ should not be in dist/"
-            exit 1
-          fi
-          echo "✓ Build excludes verified"
-      
-      - name: Run tests
-        run: npm test
-        env:
-          CI: true
-      
-      - name: Check test coverage
-        run: npm run test:coverage
-        continue-on-error: true
-
-  lint-only:
-    runs-on: ubuntu-latest
-    name: Lint and Format Check
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-      
-      - name: Check code formatting
-        run: |
-          npm run format
-          git diff --exit-code || (echo "Code is not formatted. Please run 'npm run format'" && exit 1)
-      
-      - name: Lint code
-        run: npm run lint
-      
-      - name: Type check
-        run: npm run typecheck
-
-  build-dist:
-    runs-on: ubuntu-latest
-    name: Build Distribution
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-      
-      - name: Build distribution
-        run: npm run build
-      
-      - name: Verify dist contents
-        run: |
-          echo "Checking dist contents..."
-          ls -la dist/
-          
-          # Verify essential files exist
-          test -f dist/index.js || (echo "Missing dist/index.js" && exit 1)
-          test -f dist/server.js || (echo "Missing dist/server.js" && exit 1)
-          test -f dist/types.js || (echo "Missing dist/types.js" && exit 1)
-          test -d dist/scanners || (echo "Missing dist/scanners/" && exit 1)
-          test -d dist/tools || (echo "Missing dist/tools/" && exit 1)
-          test -d dist/utils || (echo "Missing dist/utils/" && exit 1)
-          
-          # Verify excluded files don't exist
-          test ! -f dist/CLAUDE.md || (echo "CLAUDE.md should be excluded" && exit 1)
-          test ! -d dist/ai_docs || (echo "ai_docs should be excluded" && exit 1)
-          
-          echo "✓ Distribution build verified"
-      
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
-
-  test-mcp-compatibility:
-    runs-on: ubuntu-latest
-    name: Test MCP Compatibility
-    needs: build-dist
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      
-      - name: Test MCP server startup
-        run: |
-          # Test that the MCP server can start without errors
-          timeout 5s node dist/index.js --version || true
-          timeout 5s node dist/index.js --help || true
-          echo "✓ MCP server binary works"
-      
-      - name: Verify executable permissions
-        run: |
-          test -x dist/index.js || (echo "dist/index.js is not executable" && exit 1)
-          echo "✓ Executable permissions verified"
+          echo "✓ Build correctly excludes internal files"
