@@ -239,49 +239,6 @@ export interface CacheEnvironment {
   updatedAt: Date;
 }
 
-// Commented out - was used by advanced SQLiteCache methods
-// export interface CachePackage {
-//   id: number;
-//   environmentId: number;
-//   name: string;
-//   version: string;
-//   location: string;
-//   language: 'python' | 'javascript';
-//   category?: 'production' | 'development';
-//   relevanceScore: number;
-//   popularityScore: number;
-//   fileCount?: number;
-//   sizeBytes?: number;
-//   mainFile?: string;
-//   hasTypes: boolean;
-//   isDirectDependency: boolean;
-//   metadata: PackageInfo;
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-
-// Commented out - was used by SQLiteQueryBuilder
-// export interface PackageQueryOptions {
-//   limit?: number;
-//   offset?: number;
-//   filter?: string; // regex pattern
-//   category?: 'production' | 'development' | 'all';
-//   includeTypes?: boolean;
-//   sortBy?: 'relevance' | 'name' | 'popularity';
-//   sortOrder?: 'asc' | 'desc';
-//   minRelevanceScore?: number;
-//   directOnly?: boolean;
-// }
-
-// Commented out - was used by SQLiteCache.getStats()
-// export interface CacheStats {
-//   environments: number;
-//   packages: number;
-//   avgScanDuration: number;
-//   latestScan: Date;
-//   cacheSize: number; // bytes
-//   hitRate?: number;
-// }
 
 // Database row types for better-sqlite3
 export interface EnvironmentRow {
