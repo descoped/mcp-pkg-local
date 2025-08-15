@@ -1,0 +1,95 @@
+{
+  "name": "@descoped/mcp-pkg-local",
+  "version": "0.1.0",
+  "description": "An MCP tool that scans and indexes local dependency source code, enabling LLMs to understand locally installed package contracts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcp-pkg-local": "./dist/index.js"
+  },
+  "imports": {
+    "#server": {
+      "development": "./src/server.ts",
+      "default": "./dist/server.js"
+    },
+    "#types": {
+      "development": "./src/types.ts",
+      "default": "./dist/types.js"
+    },
+    "#scanners/*": {
+      "development": "./src/scanners/*.ts",
+      "default": "./dist/scanners/*.js"
+    },
+    "#tools/*": {
+      "development": "./src/tools/*.ts",
+      "default": "./dist/tools/*.js"
+    },
+    "#utils/*": {
+      "development": "./src/utils/*.ts",
+      "default": "./dist/utils/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test && npm run lint"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/descoped/mcp-pkg-local.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "ai",
+    "claude",
+    "packages",
+    "python",
+    "source-code"
+  ],
+  "author": "Descoped",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/descoped/mcp-pkg-local/issues"
+  },
+  "homepage": "https://github.com/descoped/mcp-pkg-local#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "esbuild": "^0.25.9",
+    "eslint": "^9.33.0",
+    "prettier": "^3.6.2",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
