@@ -5,10 +5,27 @@ import { readPackageTool } from '#tools/read-package';
 import { join } from 'node:path';
 import { promises as fs } from 'node:fs';
 
-// Test with the actual authly venv as specified in CLAUDE.md
+/**
+ * LOCAL DEVELOPMENT TEST ONLY - DISABLED BY DEFAULT
+ * 
+ * This test file is kept for local development purposes only.
+ * It tests against an external Python virtual environment that may exist locally.
+ * 
+ * This test is ALWAYS SKIPPED in normal test runs to keep the project self-contained
+ * and autonomous with no external dependencies.
+ * 
+ * To manually run this test during local development:
+ * TEST_AUTHLY=1 npm test
+ * 
+ * For production testing, use python-mock.test.ts which provides
+ * the same test coverage with self-contained mock environments.
+ */
+
+// Test with external Python venv - disabled for clean autonomous codebase
 const AUTHLY_PATH = join(process.cwd(), '..', 'authly');
 
-describe('Authly Virtual Environment Integration', () => {
+// Always skip unless explicitly enabled via TEST_AUTHLY environment variable
+describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment Integration', () => {
   beforeAll(async () => {
     // Check if authly venv exists
     const venvPath = join(AUTHLY_PATH, '.venv');
@@ -37,6 +54,7 @@ describe('Authly Virtual Environment Integration', () => {
 
       // Check for some common packages that might be in authly
       const packageNames = Object.keys(result.packages);
+      // eslint-disable-next-line no-console
       console.log('Found packages:', packageNames.slice(0, 10).join(', '), '...');
 
       expect(packageNames.length).toBeGreaterThan(0);

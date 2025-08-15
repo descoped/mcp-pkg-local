@@ -9,11 +9,13 @@ An MCP (Model Context Protocol) server that enables LLMs to read and understand 
 
 ## Features
 
-- 🔍 **Package Scanning**: Automatically discovers and indexes all packages in Python virtual environments
+- 🔍 **Package Scanning**: Automatically discovers and indexes all packages in Python and Node.js environments
 - 📖 **Source Code Reading**: Direct access to actual installed package source code
 - ⚡ **Smart Caching**: Fast responses with intelligent index caching
 - 🐍 **Python Support**: Full support for Python 3.9+ virtual environments (venv, .venv)
-- 🎯 **Zero Configuration**: Works out of the box with standard Python projects
+- 📦 **Node.js Support**: Complete support for Node.js packages in node_modules
+- 🎯 **Zero Configuration**: Works out of the box with standard Python and Node.js projects
+- 🛠️ **Multi Package Manager**: Supports pip, poetry, uv, pipenv, npm, pnpm, yarn, and bun
 - 🚀 **Modern Stack**: Built with TypeScript 5.7+, Node.js 20+, and latest MCP SDK
 
 ## Why mcp-pkg-local?
@@ -107,12 +109,21 @@ Once configured, the MCP server provides two main tools:
 
 ### 1. scan-packages
 
-Scans and indexes all packages in your virtual environment:
+Scans and indexes all packages in your environment (Python or Node.js):
 
+**Python Example:**
 ```
 Scanning virtual environment...
 Found 85 packages in .venv
 Python version: 3.11.9
+```
+
+**Node.js Example:**
+```
+Scanning node_modules...
+Found 304 packages
+Node version: v20.12.0
+Package manager: npm
 ```
 
 The scan results are cached for performance. Use `forceRefresh: true` to rescan.
@@ -121,6 +132,7 @@ The scan results are cached for performance. Use `forceRefresh: true` to rescan.
 
 Read source files from installed packages:
 
+**Python Example:**
 ```
 # Get file tree and __init__.py
 read-package fastapi
@@ -129,10 +141,21 @@ read-package fastapi
 read-package fastapi routing.py
 ```
 
+**Node.js Example:**
+```
+# Get file tree and package.json
+read-package express
+
+# Read specific file
+read-package express lib/router/index.js
+```
+
 ## How It Works
 
-1. **Environment Detection**: Automatically finds `.venv` or `venv` in your project
-2. **Package Discovery**: Scans `site-packages` and reads `.dist-info` metadata
+1. **Environment Detection**: Automatically detects Python (`.venv`/`venv`) or Node.js (`package.json`) projects
+2. **Package Discovery**: 
+   - Python: Scans `site-packages` and reads `.dist-info` metadata
+   - Node.js: Scans `node_modules` including scoped packages
 3. **Smart Indexing**: Creates `.pkg-local-index.json` cache for fast lookups
 4. **Source Reading**: Provides file trees and actual source code to LLMs
 
@@ -142,7 +165,8 @@ read-package fastapi routing.py
 
 - Node.js 20+ (LTS recommended)
 - npm 10+ or pnpm
-- Python 3.9+ with virtual environment
+- Python 3.9+ with virtual environment (for Python support)
+- Node.js project with node_modules (for Node.js support)
 
 ### Setup
 
@@ -210,23 +234,31 @@ The index cache (`.pkg-local-index.json`) is automatically managed:
 
 ## Supported Environments
 
-- ✅ Python virtual environments (venv, .venv)
+### Python
+- ✅ Virtual environments (venv, .venv)
+- ✅ Package managers: pip, poetry, uv, pipenv
 - ✅ Standard pip packages
 - ✅ Editable installations (-e)
 - ✅ Namespace packages
 - 🚧 Conda environments (coming soon)
-- 🚧 Poetry environments (coming soon)
+
+### Node.js/JavaScript
+- ✅ node_modules directory
+- ✅ Package managers: npm, pnpm, yarn, bun
+- ✅ Scoped packages (@org/package)
+- ✅ TypeScript packages
+- ✅ ESM and CommonJS modules
 
 ## Limitations
 
-- Python packages only (JavaScript, Go, Rust support planned)
-- Local virtual environments only (no system packages)
+- Python and Node.js/JavaScript only (Go, Rust support planned)
+- Local environments only (no system packages)
 - Read-only access (cannot modify packages)
 - 10MB file size limit for source files
 
 ## Security
 
-- Never reads files outside virtual environment
+- Never reads files outside virtual environment or node_modules
 - Path sanitization prevents directory traversal
 - No code execution, only reading
 - Binary files are blocked
@@ -246,19 +278,21 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 ## Roadmap
 
 ### v0.2.0
+- [x] Node.js/JavaScript support
+- [x] Multi-package manager support
 - [ ] Conda environment support
-- [ ] Poetry environment support
 - [ ] Package alias resolution
 
 ### v0.3.0
-- [ ] JavaScript/Node.js support
 - [ ] Go modules support
+- [ ] Rust/Cargo support
 - [ ] Auto-trigger on import detection
 
 ### v1.0.0
 - [ ] Stable API
 - [ ] Performance optimizations
 - [ ] Advanced caching strategies
+- [ ] Cross-language dependency resolution
 
 ## License
 
@@ -270,7 +304,6 @@ Built with:
 - [Model Context Protocol SDK](https://github.com/anthropics/mcp)
 - [TypeScript](https://www.typescriptlang.org)
 - [Vitest](https://vitest.dev)
-- [esbuild](https://esbuild.github.io)
 
 ## Support
 

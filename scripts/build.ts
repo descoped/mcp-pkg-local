@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
 
 async function buildProject(): Promise<void> {
-  console.log('Building mcp-pkg-local...');
+  console.error('Building mcp-pkg-local...');
 
   // Clean dist directory
   const distPath = join(projectRoot, 'dist');
@@ -21,23 +21,23 @@ async function buildProject(): Promise<void> {
   await fs.mkdir(distPath, { recursive: true });
 
   // Use TypeScript compiler to build
-  console.log('Compiling TypeScript...');
+  console.error('Compiling TypeScript...');
   try {
     await execAsync('npx tsc -p tsconfig.build.json', { cwd: projectRoot });
   } catch (error) {
     console.error('TypeScript compilation failed:', error);
-    process.exit(1);
+    throw error; // Re-throw to be handled by the main catch
   }
 
   // Fix imports in the compiled JavaScript files
-  console.log('Fixing imports in compiled files...');
+  console.error('Fixing imports in compiled files...');
   await fixImports(distPath);
 
   // Make the entry file executable
   const indexPath = join(distPath, 'index.js');
   await fs.chmod(indexPath, 0o755);
 
-  console.log('Build complete!');
+  console.error('Build complete!');
 }
 
 async function fixImports(dir: string): Promise<void> {

@@ -112,7 +112,18 @@ export function createServer(): Server {
         }
 
         default:
-          throw new Error(`Unknown tool: ${name}`);
+          log('error', `Unknown tool: ${name}`);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: `Unknown tool: ${name}`,
+                  availableTools: tools.map(t => t.name),
+                }, null, 2),
+              },
+            ],
+          };
       }
     } catch (error) {
       log('error', `Tool execution failed: ${name}`, error);

@@ -194,9 +194,21 @@ This document outlines the implementation tasks for building the mcp-pkg-local M
 - Modern TypeScript with strict mode and Zod validation
 - Node.js subpath imports for clean module resolution
 
+## Phase 9: Node.js Support (v0.1.0 extension)
+### Break down nodejs-support-plan.md into implementation tasks
+- [ ] Analyze nodejs-support-plan.md minimal requirements
+- [ ] Create task breakdown for NodeJSScanner implementation
+- [ ] Define specific changes needed for src/scanners/nodejs.ts
+- [ ] Plan server.ts integration for multi-language detection
+- [ ] Design types.ts updates for javascript language support
+- [ ] Create test plan for node_modules scanning
+- [ ] Document integration approach with existing architecture
+- [ ] Sync implementation tasks with TodoWrite tool
+
 ## Notes
 - MVP (Phase 1-8) is COMPLETE and production-ready
 - Successfully tested with ../authly/.venv (Python 3.11.9, 85 packages)
 - Python support fully implemented and tested
 - Implementation follows minimal philosophy - LLMs interpret source code
 - Ready for npm publishing as @descoped/mcp-pkg-local
+- Node.js support planned for v0.1.0 with minimal scope

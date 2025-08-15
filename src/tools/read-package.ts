@@ -1,5 +1,5 @@
-import { PythonScanner } from '#scanners/python';
 import { IndexCache } from '#utils/cache';
+import { detectAndCreateScanner } from '#utils/scanner-factory';
 import { readFileWithSizeCheck, generateFileTree, sanitizePath } from '#utils/fs';
 import type { ReadPackageParams, ReadPackageResult } from '#types';
 import { ReadPackageParamsSchema, PackageNotFoundError, FileNotFoundError } from '#types';
@@ -26,16 +26,22 @@ export async function readPackageTool(params: ReadPackageParams): Promise<ReadPa
 
     // If not in cache, scan for it
     if (!packageLocation) {
-      const scanner = new PythonScanner();
+      const scanner = await detectAndCreateScanner();
       packageLocation = await scanner.getPackageLocation(packageName);
       packageVersion = await scanner.getPackageVersion(packageName);
 
       if (!packageLocation) {
-        throw new PackageNotFoundError(packageName);
+        const error = new PackageNotFoundError(packageName);
+        return {
+          type: 'error',
+          success: false,
+          error: error.message,
+          ...(error.suggestion !== undefined && { suggestion: error.suggestion }),
+        };
       }
     }
 
-    // If no file path specified, return file tree and __init__.py
+    // If no file path specified, return file tree and main/init file
     if (!filePath) {
       console.error(`[READ] Generating file tree for ${packageName}`);
 
@@ -44,18 +50,41 @@ export async function readPackageTool(params: ReadPackageParams): Promise<ReadPa
         maxFiles: 500,
       });
 
-      // Try to read __init__.py if it exists
+      // Try to read main/init file based on package type
       let initContent: string | undefined;
-      const initPath = join(packageLocation, '__init__.py');
-
+      
+      // Check if this is a Node.js package
+      const packageJsonPath = join(packageLocation, 'package.json');
+      let isNodePackage = false;
+      
       try {
-        const stats = await fs.stat(initPath);
-        if (stats.isFile() && stats.size < 50000) {
-          // Limit init file to 50KB
-          initContent = await readFileWithSizeCheck(initPath);
-        }
+        await fs.access(packageJsonPath);
+        isNodePackage = true;
       } catch {
-        // __init__.py might not exist or be too large
+        // Not a Node.js package
+      }
+
+      if (isNodePackage) {
+        // For Node.js packages, try to read package.json as the main info
+        try {
+          const stats = await fs.stat(packageJsonPath);
+          if (stats.isFile() && stats.size < 50000) {
+            initContent = await readFileWithSizeCheck(packageJsonPath);
+          }
+        } catch {
+          // package.json might be too large
+        }
+      } else {
+        // For Python packages, try to read __init__.py
+        const initPath = join(packageLocation, '__init__.py');
+        try {
+          const stats = await fs.stat(initPath);
+          if (stats.isFile() && stats.size < 50000) {
+            initContent = await readFileWithSizeCheck(initPath);
+          }
+        } catch {
+          // __init__.py might not exist or be too large
+        }
       }
 
       return {
@@ -77,10 +106,22 @@ export async function readPackageTool(params: ReadPackageParams): Promise<ReadPa
     try {
       const stats = await fs.stat(fullPath);
       if (!stats.isFile()) {
-        throw new FileNotFoundError(filePath);
+        const error = new FileNotFoundError(filePath);
+        return {
+          type: 'error',
+          success: false,
+          error: error.message,
+          ...(error.suggestion !== undefined && { suggestion: error.suggestion }),
+        };
       }
     } catch {
-      throw new FileNotFoundError(filePath);
+      const error = new FileNotFoundError(filePath);
+      return {
+        type: 'error',
+        success: false,
+        error: error.message,
+        ...(error.suggestion !== undefined && { suggestion: error.suggestion }),
+      };
     }
 
     const content = await readFileWithSizeCheck(fullPath);

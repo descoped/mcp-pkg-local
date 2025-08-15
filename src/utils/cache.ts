@@ -83,17 +83,6 @@ export class IndexCache {
     }
   }
 
-  async clear(): Promise<void> {
-    try {
-      await fs.unlink(this.indexPath);
-      this.cache = null;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
-  }
-
   async getAge(): Promise<number | null> {
     try {
       const stats = await fs.stat(this.indexPath);

@@ -1,5 +1,5 @@
-import { PythonScanner } from '#scanners/python';
 import { IndexCache } from '#utils/cache';
+import { detectAndCreateScanner } from '#utils/scanner-factory';
 import type { ScanPackagesParams, ScanResult } from '#types';
 import { ScanPackagesParamsSchema } from '#types';
 
@@ -25,8 +25,8 @@ export async function scanPackagesTool(params: ScanPackagesParams): Promise<Scan
 
   console.error('[SCAN] Starting fresh package scan');
 
-  // Perform fresh scan
-  const scanner = new PythonScanner();
+  // Detect environment and create appropriate scanner
+  const scanner = await detectAndCreateScanner();
   const result = await scanner.scan();
 
   // Save to cache

@@ -8,6 +8,11 @@ import { promisify } from 'node:util';
 const execAsync = promisify(exec);
 
 export class PythonScanner extends BaseScanner {
+  // LanguageScanner required properties
+  readonly language = 'python' as const;
+  readonly supportedPackageManagers = ['pip', 'poetry', 'uv', 'pipenv', 'conda'] as const;
+  readonly supportedExtensions = ['.py', '.pyi', '.pyx', '.pyd', '.so'] as const;
+  
   private venvPath: string | null = null;
   private sitePackagesPath: string | null = null;
   private packageCache = new Map<string, PackageInfo>();
@@ -111,6 +116,80 @@ export class PythonScanner extends BaseScanner {
     return null;
   }
 
+  async canHandle(basePath: string): Promise<boolean> {
+    // Check for virtual environment directories
+    const venvDirs = ['.venv', 'venv'];
+    for (const dir of venvDirs) {
+      if (await this.pathExists(join(basePath, dir))) {
+        return true;
+      }
+    }
+    // Also check for Python project files
+    const projectFiles = ['pyproject.toml', 'requirements.txt', 'Pipfile', 'environment.yml'];
+    for (const file of projectFiles) {
+      if (await this.pathExists(join(basePath, file))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async detectPackageManager(): Promise<string | null> {
+    const basePath = this.basePath;
+    
+    // Check for package manager config files
+    if (await this.pathExists(join(basePath, 'pyproject.toml'))) {
+      const content = await this.readFile(join(basePath, 'pyproject.toml'));
+      if (content.includes('[tool.poetry]')) return 'poetry';
+      if (content.includes('[tool.uv]') || content.includes('uv.')) return 'uv';
+      return 'pip'; // Default for pyproject.toml
+    }
+    if (await this.pathExists(join(basePath, 'Pipfile'))) return 'pipenv';
+    if (await this.pathExists(join(basePath, 'environment.yml'))) return 'conda';
+    if (await this.pathExists(join(basePath, 'requirements.txt'))) return 'pip';
+    
+    return 'pip'; // default
+  }
+
+  async isDependenciesInstalled(): Promise<boolean> {
+    return this.sitePackagesPath ? this.pathExists(this.sitePackagesPath) : false;
+  }
+
+  async getLockFilePath(): Promise<string | null> {
+    const basePath = this.basePath;
+    const lockFiles = [
+      'poetry.lock',
+      'Pipfile.lock',
+      'uv.lock',
+      'requirements.lock',
+      'requirements-lock.txt'
+    ];
+    
+    for (const lockFile of lockFiles) {
+      const path = join(basePath, lockFile);
+      if (await this.pathExists(path)) {
+        return path;
+      }
+    }
+    return null;
+  }
+
+  // Python doesn't have a standard "main" file like Node.js
+  async getPackageMainFile(packageName: string): Promise<string | null> {
+    const location = await this.getPackageLocation(packageName);
+    if (!location) return null;
+    
+    // Check for __init__.py or __main__.py
+    const mainFiles = ['__init__.py', '__main__.py'];
+    for (const file of mainFiles) {
+      const path = join(location, file);
+      if (await this.pathExists(path)) {
+        return file;
+      }
+    }
+    return null;
+  }
+
   async getEnvironmentInfo(): Promise<EnvironmentInfo> {
     if (!this.venvPath) {
       throw new EnvironmentNotFoundError();
@@ -193,7 +272,7 @@ export class PythonScanner extends BaseScanner {
       for (const pythonPath of pythonPaths) {
         if (await this.pathExists(pythonPath)) {
           const { stdout } = await execAsync(`"${pythonPath}" --version`);
-          const match = stdout.match(/Python (\d+\.\d+\.\d+)/);
+          const match = /Python (\d+\.\d+\.\d+)/.exec(stdout);
           if (match?.[1]) {
             return match[1];
           }
@@ -247,13 +326,13 @@ export class PythonScanner extends BaseScanner {
       const initPath = join(entryPath, '__init__.py');
       if (await this.pathExists(initPath)) {
         // If we don't already have info about this package
-        if (!packages[entry]) {
-          packages[entry] = {
+        packages[entry] ??= {
             name: entry,
             version: 'unknown',
             location: entryPath,
+            language: 'python',
+            packageManager: 'pip',
           };
-        }
       }
     }
 
@@ -268,8 +347,8 @@ export class PythonScanner extends BaseScanner {
       }
 
       const metadata = await this.readFile(metadataPath);
-      const nameMatch = metadata.match(/^Name:\s*(.+)$/m);
-      const versionMatch = metadata.match(/^Version:\s*(.+)$/m);
+      const nameMatch = /^Name:\s*(.+)$/m.exec(metadata);
+      const versionMatch = /^Version:\s*(.+)$/m.exec(metadata);
 
       if (!nameMatch) {
         return null;
@@ -282,7 +361,13 @@ export class PythonScanner extends BaseScanner {
       const packageLoc = await this.getPackageLocation(name);
       const location = packageLoc ?? distInfoPath;
 
-      return { name, version, location };
+      return { 
+        name, 
+        version, 
+        location,
+        language: 'python' as const,
+        packageManager: 'pip'
+      };
     } catch (error) {
       this.log(`Failed to extract info from ${distInfoPath}:`, error);
       return null;
@@ -297,7 +382,7 @@ export class PythonScanner extends BaseScanner {
       }
 
       const metadata = await this.readFile(metadataPath);
-      const versionMatch = metadata.match(/^Version:\s*(.+)$/m);
+      const versionMatch = /^Version:\s*(.+)$/m.exec(metadata);
 
       return versionMatch?.[1]?.trim() ?? null;
     } catch {

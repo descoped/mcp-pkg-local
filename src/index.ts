@@ -5,11 +5,13 @@ import { startServer } from '#server';
 const args = process.argv.slice(2);
 
 if (args.includes('--version') || args.includes('-v')) {
+  // eslint-disable-next-line no-console
   console.log('0.1.0');
   process.exit(0);
 }
 
 if (args.includes('--help') || args.includes('-h')) {
+  // eslint-disable-next-line no-console
   console.log(`
 mcp-pkg-local - MCP server for reading local package source code
 
