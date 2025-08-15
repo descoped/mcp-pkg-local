@@ -18,8 +18,12 @@ export class UnifiedCache {
       mkdirSync(cacheDir, { recursive: true });
     }
 
+    // Use directory-based database name for tests to allow cache sharing while avoiding conflicts
+    const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+    const dbName = isTest ? `cache-${Buffer.from(basePath).toString('hex').slice(-16)}.db` : 'cache.db';
+
     this.cache = new SQLiteCache({
-      dbPath: join(cacheDir, 'cache.db'),
+      dbPath: join(cacheDir, dbName),
       maxAge: 3600, // 1 hour in seconds
       enableWAL: true,
       enableFileCache: false,

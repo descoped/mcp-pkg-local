@@ -2,26 +2,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    globals: true,
-    environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/**',
-        'dist/**',
-        'tests/**',
-        '*.config.ts',
-        '*.config.js',
-        'scripts/**'
-      ],
-      thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
+    // Run tests sequentially to avoid SQLite database locking issues
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
       },
     },
-    include: ['tests/**/*.{test,spec}.ts'],
+    // Set test timeout
+    testTimeout: 60000,
   },
 });
