@@ -40,6 +40,8 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json coverage .nyc_output",
+    "clean:cache": "rm -rf .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json",
     "prepare": "npm run build",
     "prepublishOnly": "npm run test && npm run lint"
   },

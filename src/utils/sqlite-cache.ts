@@ -419,7 +419,7 @@ export class SQLiteCache {
       return false;
     }
 
-    // SQLite datetime strings need to be parsed carefully  
+    // SQLite datetime strings need to be parsed carefully
     const lastScanTime = new Date(env.last_scan + 'Z').getTime(); // Add Z for UTC
     const ageSeconds = (Date.now() - lastScanTime) / 1000;
     return ageSeconds <= this.config.maxAge;

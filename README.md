@@ -298,6 +298,10 @@ npm test
 
 # Development mode
 npm run dev
+
+# Clean build artifacts and cache
+npm run clean        # Remove everything (dist, node_modules, cache)
+npm run clean:cache  # Remove only cache files
 ```
 
 ### Project Structure

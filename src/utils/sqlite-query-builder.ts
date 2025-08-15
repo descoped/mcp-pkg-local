@@ -71,9 +71,9 @@
 //
 //     // Use covering index for best performance
 //     let sql = `
-//       SELECT 
+//       SELECT
 //         p.*,
-//         CASE 
+//         CASE
 //           WHEN p.is_direct_dependency = 1 THEN p.relevance_score + 100
 //           WHEN p.category = 'production' THEN p.relevance_score + 50
 //           ELSE p.relevance_score
@@ -117,8 +117,8 @@
 //     const patternConditions = groupPatterns.map(() => 'name GLOB ?');
 //
 //     let sql = `
-//       SELECT * FROM packages 
-//       WHERE environment_id = ? 
+//       SELECT * FROM packages
+//       WHERE environment_id = ?
 //       AND (${patternConditions.join(' OR ')})
 //       ORDER BY relevance_score DESC, name ASC
 //     `;
@@ -134,7 +134,7 @@
 //    */
 //   static buildSummaryQuery(environmentId: number): { sql: string; params: unknown[] } {
 //     const sql = `
-//       SELECT 
+//       SELECT
 //         COUNT(*) as total,
 //         COUNT(CASE WHEN category = 'production' THEN 1 END) as production_count,
 //         COUNT(CASE WHEN category = 'development' THEN 1 END) as development_count,
@@ -168,7 +168,7 @@
 //     const patternConditions = patterns.map(() => 'name LIKE ?');
 //
 //     const sql = `
-//       SELECT 
+//       SELECT
 //         *,
 //         CASE
 //           WHEN name = ? THEN 1000
@@ -194,8 +194,8 @@
 //   static buildDependencyAnalysisQuery(environmentId: number): { sql: string; params: unknown[] } {
 //     const sql = `
 //       WITH dependency_stats AS (
-//         SELECT 
-//           CASE 
+//         SELECT
+//           CASE
 //             WHEN is_direct_dependency = 1 THEN 'direct'
 //             ELSE 'transitive'
 //           END as dep_type,
