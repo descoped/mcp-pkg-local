@@ -6,7 +6,9 @@ import { ReadPackageParamsSchema, PackageNotFoundError, FileNotFoundError } from
 import { join } from 'node:path';
 import { promises as fs } from 'node:fs';
 
-export async function readPackageTool(params: { packageName: string } & Partial<ReadPackageParams>): Promise<ReadPackageResult> {
+export async function readPackageTool(
+  params: { packageName: string } & Partial<ReadPackageParams>,
+): Promise<ReadPackageResult> {
   // Validate parameters
   const validated = ReadPackageParamsSchema.parse(params);
   const { packageName, filePath, includeTree, maxDepth, pattern } = validated;
@@ -54,7 +56,7 @@ export async function readPackageTool(params: { packageName: string } & Partial<
       // Check if this is a Node.js package
       const packageJsonPath = join(packageLocation, 'package.json');
       let isNodePackage = false;
-      
+
       try {
         await fs.access(packageJsonPath);
         isNodePackage = true;
@@ -64,7 +66,15 @@ export async function readPackageTool(params: { packageName: string } & Partial<
 
       // Get important/main files for the package
       if (isNodePackage) {
-        mainFiles = ['package.json', 'index.js', 'index.ts', 'index.mjs', 'lib/index.js', 'dist/index.js', 'src/index.ts'];
+        mainFiles = [
+          'package.json',
+          'index.js',
+          'index.ts',
+          'index.mjs',
+          'lib/index.js',
+          'dist/index.js',
+          'src/index.ts',
+        ];
       } else {
         mainFiles = ['__init__.py', 'setup.py', 'pyproject.toml', '__main__.py'];
       }
@@ -86,19 +96,19 @@ export async function readPackageTool(params: { packageName: string } & Partial<
         // Generate full file tree with specified constraints
         const fullTree = await generateFileTree(packageLocation, {
           maxDepth: maxDepth || 2,
-          maxFiles: 200,  // Limit files even when includeTree is true
+          maxFiles: 200, // Limit files even when includeTree is true
         });
 
         // Apply pattern filtering if provided
         if (pattern) {
           // Convert glob pattern to regex
           const regexPattern = pattern
-            .replace(/\*\*/g, '.*')  // ** matches any number of directories
+            .replace(/\*\*/g, '.*') // ** matches any number of directories
             .replace(/\*/g, '[^/]*') // * matches any characters except /
-            .replace(/\?/g, '.');     // ? matches single character
-          
+            .replace(/\?/g, '.'); // ? matches single character
+
           const regex = new RegExp(regexPattern);
-          fileTree = fullTree.filter(file => regex.test(file));
+          fileTree = fullTree.filter((file) => regex.test(file));
         } else {
           fileTree = fullTree;
         }
@@ -113,12 +123,12 @@ export async function readPackageTool(params: { packageName: string } & Partial<
       } else {
         // Lazy loading: only return main files and count
         const fullTree = await generateFileTree(packageLocation, {
-          maxDepth: 1,  // Only scan top level
+          maxDepth: 1, // Only scan top level
           maxFiles: 50,
         });
         fileCount = fullTree.length;
-        fileTree = mainFiles;  // Only return main files
-        truncated = false;  // Not truncated in lazy mode
+        fileTree = mainFiles; // Only return main files
+        truncated = false; // Not truncated in lazy mode
       }
 
       // Try to read main/init file content

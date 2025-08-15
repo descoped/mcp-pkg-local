@@ -4,6 +4,7 @@ import { EnvironmentNotFoundError } from '#types';
 import { join, basename } from 'node:path';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { PackageScorer } from '#utils/package-scorer';
 
 const execAsync = promisify(exec);
 
@@ -12,12 +13,13 @@ export class PythonScanner extends BaseScanner {
   readonly language = 'python' as const;
   readonly supportedPackageManagers = ['pip', 'poetry', 'uv', 'pipenv', 'conda'] as const;
   readonly supportedExtensions = ['.py', '.pyi', '.pyx', '.pyd', '.so'] as const;
-  
+
   private venvPath: string | null = null;
   private sitePackagesPath: string | null = null;
   private packageCache = new Map<string, PackageInfo>();
 
   async scan(): Promise<ScanResult> {
+    const startTime = Date.now();
     this.log('Starting Python environment scan');
 
     // Find virtual environment
@@ -41,12 +43,20 @@ export class PythonScanner extends BaseScanner {
     const environment = await this.getEnvironmentInfo();
 
     // Scan packages
-    const packages = await this.scanPackages();
+    let packages = await this.scanPackages();
+
+    // Apply relevance scoring to all packages
+    packages = PackageScorer.scorePackages(packages, this.basePath);
+
+    const scanDuration = Date.now() - startTime;
 
     return {
       success: true,
       packages,
-      environment,
+      environment: {
+        ...environment,
+        scanDurationMs: scanDuration,
+      },
       scanTime: new Date().toISOString(),
     };
   }
@@ -137,7 +147,7 @@ export class PythonScanner extends BaseScanner {
 
   async detectPackageManager(): Promise<string | null> {
     const basePath = this.basePath;
-    
+
     // Check for package manager config files
     if (await this.pathExists(join(basePath, 'pyproject.toml'))) {
       const content = await this.readFile(join(basePath, 'pyproject.toml'));
@@ -148,7 +158,7 @@ export class PythonScanner extends BaseScanner {
     if (await this.pathExists(join(basePath, 'Pipfile'))) return 'pipenv';
     if (await this.pathExists(join(basePath, 'environment.yml'))) return 'conda';
     if (await this.pathExists(join(basePath, 'requirements.txt'))) return 'pip';
-    
+
     return 'pip'; // default
   }
 
@@ -163,9 +173,9 @@ export class PythonScanner extends BaseScanner {
       'Pipfile.lock',
       'uv.lock',
       'requirements.lock',
-      'requirements-lock.txt'
+      'requirements-lock.txt',
     ];
-    
+
     for (const lockFile of lockFiles) {
       const path = join(basePath, lockFile);
       if (await this.pathExists(path)) {
@@ -179,7 +189,7 @@ export class PythonScanner extends BaseScanner {
   async getPackageMainFile(packageName: string): Promise<string | null> {
     const location = await this.getPackageLocation(packageName);
     if (!location) return null;
-    
+
     // Check for __init__.py or __main__.py
     const mainFiles = ['__init__.py', '__main__.py'];
     for (const file of mainFiles) {
@@ -192,8 +202,13 @@ export class PythonScanner extends BaseScanner {
   }
 
   async getEnvironmentInfo(): Promise<EnvironmentInfo> {
+    // Ensure we have found the virtual environment
     if (!this.venvPath) {
-      throw new EnvironmentNotFoundError();
+      const envPath = await this.findVirtualEnvironment();
+      if (!envPath) {
+        throw new EnvironmentNotFoundError();
+      }
+      this.venvPath = envPath;
     }
 
     const pythonVersion = await this.getPythonVersion();
@@ -328,14 +343,16 @@ export class PythonScanner extends BaseScanner {
       if (await this.pathExists(initPath)) {
         // If we don't already have info about this package
         // Store relative path from project root
-        const relativePath = entryPath.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
+        const relativePath = entryPath
+          .replace(this.basePath + '/', '')
+          .replace(this.basePath + '\\', '');
         packages[entry] ??= {
-            name: entry,
-            version: 'unknown',
-            location: relativePath,
-            language: 'python',
-            packageManager: 'pip',
-          };
+          name: entry,
+          version: 'unknown',
+          location: relativePath,
+          language: 'python',
+          packageManager: 'pip',
+        };
       }
     }
 
@@ -365,14 +382,16 @@ export class PythonScanner extends BaseScanner {
       const location = packageLoc ?? distInfoPath;
 
       // Store relative path from project root
-      const relativeLoc = location.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
-      
-      return { 
-        name, 
-        version, 
+      const relativeLoc = location
+        .replace(this.basePath + '/', '')
+        .replace(this.basePath + '\\', '');
+
+      return {
+        name,
+        version,
         location: relativeLoc,
         language: 'python' as const,
-        packageManager: 'pip'
+        packageManager: 'pip',
       };
     } catch (error) {
       this.log(`Failed to extract info from ${distInfoPath}:`, error);

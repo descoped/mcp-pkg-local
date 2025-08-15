@@ -17,7 +17,7 @@ describe('Node.js Environment Integration', () => {
 
     it('should detect Node.js project', async () => {
       const result = await scanner.scan();
-      
+
       expect(result.success).toBe(true);
       expect(result.environment.type).toMatch(/npm|pnpm|yarn/);
       expect(result.environment.nodeVersion).toBeTruthy();
@@ -27,18 +27,18 @@ describe('Node.js Environment Integration', () => {
     it('should find common Node.js packages', async () => {
       const result = await scanner.scan();
       const packageNames = Object.keys(result.packages);
-      
+
       // eslint-disable-next-line no-console
       console.log(`Found packages: ${packageNames.slice(0, 10).join(', ')} ...`);
-      
+
       // We should have many packages
       expect(packageNames.length).toBeGreaterThan(50);
-      
+
       // Check for common packages we know exist in our dev dependencies
-      const hasTypeScript = packageNames.some(name => name.includes('typescript'));
-      const hasVitest = packageNames.some(name => name.includes('vitest'));
-      const hasEslint = packageNames.some(name => name.includes('eslint'));
-      
+      const hasTypeScript = packageNames.some((name) => name.includes('typescript'));
+      const hasVitest = packageNames.some((name) => name.includes('vitest'));
+      const hasEslint = packageNames.some((name) => name.includes('eslint'));
+
       expect(hasTypeScript).toBe(true);
       expect(hasVitest).toBe(true);
       expect(hasEslint).toBe(true);
@@ -47,14 +47,14 @@ describe('Node.js Environment Integration', () => {
     it('should handle scoped packages', async () => {
       const result = await scanner.scan();
       const packageNames = Object.keys(result.packages);
-      
+
       // Check for scoped packages
-      const scopedPackages = packageNames.filter(name => name.startsWith('@'));
+      const scopedPackages = packageNames.filter((name) => name.startsWith('@'));
       expect(scopedPackages.length).toBeGreaterThan(0);
-      
+
       // Verify a specific scoped package we know exists
-      const hasMCPPackage = scopedPackages.some(name => 
-        name.includes('@modelcontextprotocol/sdk')
+      const hasMCPPackage = scopedPackages.some((name) =>
+        name.includes('@modelcontextprotocol/sdk'),
       );
       expect(hasMCPPackage).toBe(true);
     });
@@ -74,12 +74,15 @@ describe('Node.js Environment Integration', () => {
     it('should detect main entry file', async () => {
       const mainFile = await scanner.getPackageMainFile('typescript');
       expect(mainFile).toBeTruthy();
-      
+
       // TypeScript's main file should exist
       const location = await scanner.getPackageLocation('typescript');
       if (location && mainFile) {
         const mainPath = join(location, mainFile);
-        const exists = await fs.access(mainPath).then(() => true).catch(() => false);
+        const exists = await fs
+          .access(mainPath)
+          .then(() => true)
+          .catch(() => false);
         expect(exists).toBe(true);
       }
     });
@@ -88,14 +91,14 @@ describe('Node.js Environment Integration', () => {
   describe('scan-packages tool', () => {
     it('should scan Node.js packages successfully', async () => {
       const result = await scanPackagesTool({ forceRefresh: true, limit: 500 }); // Use higher limit for testing
-      
+
       expect(result.success).toBe(true);
       expect(result.environment.type).toMatch(/npm|pnpm|yarn/);
       expect(result.environment.nodeVersion).toBeTruthy();
-      
+
       const packageCount = Object.keys(result.packages).length;
       expect(packageCount).toBeGreaterThan(50);
-      
+
       // Verify package structure
       const firstPackage = Object.values(result.packages)[0];
       expect(firstPackage).toHaveProperty('name');
@@ -107,21 +110,21 @@ describe('Node.js Environment Integration', () => {
 
   describe('read-package tool', () => {
     it('should read package file tree', async () => {
-      // First scan to ensure cache
-      await scanPackagesTool({ forceRefresh: true });
-      
+      // First scan to ensure cache with higher limit to include the test package
+      await scanPackagesTool({ forceRefresh: true, limit: 500 });
+
       // Read a small package
-      const result = await readPackageTool({ 
-        packageName: '@babel/helper-validator-identifier' 
+      const result = await readPackageTool({
+        packageName: '@babel/helper-validator-identifier',
       });
-      
+
       expect(result.success).toBe(true);
       if (result.type === 'tree') {
         expect(result.package).toBe('@babel/helper-validator-identifier');
         expect(result.version).toBeTruthy();
         expect(result.fileTree).toBeDefined();
         expect(Array.isArray(result.fileTree)).toBe(true);
-        
+
         // Should have package.json as init content for Node packages
         expect(result.initContent).toBeTruthy();
         if (result.initContent) {
@@ -132,21 +135,21 @@ describe('Node.js Environment Integration', () => {
     });
 
     it('should read specific file from package', async () => {
-      // First scan to ensure cache
-      await scanPackagesTool({ forceRefresh: true });
-      
+      // First scan to ensure cache with higher limit to include the test package
+      await scanPackagesTool({ forceRefresh: true, limit: 500 });
+
       // Read package.json from a package
-      const result = await readPackageTool({ 
+      const result = await readPackageTool({
         packageName: 'typescript',
-        filePath: 'package.json'
+        filePath: 'package.json',
       });
-      
+
       expect(result.success).toBe(true);
       if (result.type === 'file') {
         expect(result.package).toBe('typescript');
         expect(result.filePath).toBe('package.json');
         expect(result.content).toBeTruthy();
-        
+
         // Verify it's valid JSON
         const parsed = JSON.parse(result.content) as { name: string; version: string };
         expect(parsed.name).toBe('typescript');
@@ -156,20 +159,20 @@ describe('Node.js Environment Integration', () => {
 
     it('should handle JavaScript source files', async () => {
       // First get file tree to find a .js file
-      const treeResult = await readPackageTool({ 
-        packageName: '@babel/helper-validator-identifier' 
+      const treeResult = await readPackageTool({
+        packageName: '@babel/helper-validator-identifier',
       });
-      
+
       if (treeResult.type === 'tree') {
         // Find a .js file
-        const jsFile = treeResult.fileTree.find(f => f.endsWith('.js'));
-        
+        const jsFile = treeResult.fileTree.find((f) => f.endsWith('.js'));
+
         if (jsFile) {
           const fileResult = await readPackageTool({
             packageName: '@babel/helper-validator-identifier',
-            filePath: jsFile
+            filePath: jsFile,
           });
-          
+
           expect(fileResult.success).toBe(true);
           if (fileResult.type === 'file') {
             expect(fileResult.content).toBeTruthy();

@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 export abstract class BaseScanner implements LanguageScanner, PackageManagerScanner {
   protected readonly basePath: string;
   protected readonly debug: boolean;
-  
+
   // LanguageScanner required properties
   abstract readonly language: 'python' | 'javascript' | 'go' | 'rust' | 'java';
   abstract readonly supportedPackageManagers: readonly string[];
@@ -20,11 +20,11 @@ export abstract class BaseScanner implements LanguageScanner, PackageManagerScan
   abstract getPackageLocation(packageName: string): Promise<string | null>;
   abstract getPackageVersion(packageName: string): Promise<string | null>;
   abstract getEnvironmentInfo(): Promise<EnvironmentInfo>;
-  
+
   // LanguageScanner interface methods (required)
   abstract canHandle(basePath: string): Promise<boolean>;
   abstract getPackageMainFile?(packageName: string): Promise<string | null>;
-  
+
   // PackageManagerScanner interface methods (required)
   abstract detectPackageManager(): Promise<string | null>;
   abstract isDependenciesInstalled(): Promise<boolean>;
@@ -61,8 +61,6 @@ export abstract class BaseScanner implements LanguageScanner, PackageManagerScan
   protected async readDir(path: string): Promise<string[]> {
     return fs.readdir(path);
   }
-
-
 
   protected normalizePackageName(name: string): string {
     // Normalize package names (e.g., pillow -> PIL)

@@ -4,6 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Permanent Rules (Never remove)
 
+**User Confirmation Required**: Never carry out tasks without the user's explicit confirmation after planning. Never assume random stuff and always stick to the single source of truth: the codebase. Never violate these rules.
+
+**Compatibility Strategy**: This is a greenfield project. Prioritize future compatibility over backward compatibility. Current implementation plan: ai_docs/sqlite-cache-enhancement-plan.md.
+
 **Package Manager Architecture**: Python package managers are not limited to `pip`. Modern Python uses various package managers:
 - **pip**: Traditional, uses `requirements.txt`
 - **poetry**: Modern, uses `pyproject.toml`

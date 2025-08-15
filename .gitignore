@@ -147,3 +147,6 @@ dist/
 # mcp-pkg-local cache
 .pkg-local-index.json
 .pkg-local-cache/
+*.db
+*.sqlite
+*.sqlite3

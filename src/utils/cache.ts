@@ -1,7 +1,8 @@
-import { promises as fs } from 'node:fs';
+import { existsSync, mkdirSync, promises as fs } from 'node:fs';
 import { join } from 'node:path';
-import type { IndexFile, ScanResult, PackageInfo } from '#types';
+import type { IndexFile, PackageInfo, ScanResult } from '#types';
 import { IndexFileSchema } from '#types';
+import { SQLiteCache } from '#utils/sqlite-cache';
 
 const INDEX_FILE_NAME = '.pkg-local-index.json';
 const CACHE_DIR_NAME = '.pkg-local-cache';
@@ -16,7 +17,10 @@ interface CachePartition {
   packageTimestamps: Record<string, string>; // Individual package update times
 }
 
-export class IndexCache {
+// Legacy export for backward compatibility
+export { IndexCache, PartitionedCache };
+
+class IndexCache {
   private readonly indexPath: string;
   private cache: IndexFile | null = null;
 
@@ -24,14 +28,15 @@ export class IndexCache {
     this.indexPath = join(basePath, INDEX_FILE_NAME);
   }
 
-  async exists(): Promise<boolean> {
-    try {
-      await fs.access(this.indexPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  // Commented out - not used
+  // async exists(): Promise<boolean> {
+  //   try {
+  //     await fs.access(this.indexPath);
+  //     return true;
+  //   } catch {
+  //     return false;
+  //   }
+  // }
 
   async read(): Promise<IndexFile | null> {
     try {
@@ -63,52 +68,55 @@ export class IndexCache {
     }
   }
 
-  async write(scanResult: ScanResult): Promise<void> {
-    const indexFile: IndexFile = {
-      version: INDEX_VERSION,
-      lastUpdated: scanResult.scanTime,
-      environment: scanResult.environment,
-      packages: scanResult.packages,
-    };
+  // Commented out - not used
+  // async write(scanResult: ScanResult): Promise<void> {
+  //   const indexFile: IndexFile = {
+  //     version: INDEX_VERSION,
+  //     lastUpdated: scanResult.scanTime,
+  //     environment: scanResult.environment,
+  //     packages: scanResult.packages,
+  //   };
+  //
+  //   // Write atomically using a temp file
+  //   const tempPath = `${this.indexPath}.tmp`;
+  //
+  //   try {
+  //     await fs.writeFile(tempPath, JSON.stringify(indexFile, null, 2), 'utf-8');
+  //
+  //     // Atomic rename
+  //     await fs.rename(tempPath, this.indexPath);
+  //
+  //     // Update cache
+  //     this.cache = indexFile;
+  //   } catch (error) {
+  //     // Clean up temp file if it exists
+  //     try {
+  //       await fs.unlink(tempPath);
+  //     } catch {
+  //       // Ignore cleanup errors
+  //     }
+  //     throw error;
+  //   }
+  // }
 
-    // Write atomically using a temp file
-    const tempPath = `${this.indexPath}.tmp`;
+  // Commented out - not used
+  // async getAge(): Promise<number | null> {
+  //   try {
+  //     const stats = await fs.stat(this.indexPath);
+  //     return Date.now() - stats.mtime.getTime();
+  //   } catch {
+  //     return null;
+  //   }
+  // }
 
-    try {
-      await fs.writeFile(tempPath, JSON.stringify(indexFile, null, 2), 'utf-8');
-
-      // Atomic rename
-      await fs.rename(tempPath, this.indexPath);
-
-      // Update cache
-      this.cache = indexFile;
-    } catch (error) {
-      // Clean up temp file if it exists
-      try {
-        await fs.unlink(tempPath);
-      } catch {
-        // Ignore cleanup errors
-      }
-      throw error;
-    }
-  }
-
-  async getAge(): Promise<number | null> {
-    try {
-      const stats = await fs.stat(this.indexPath);
-      return Date.now() - stats.mtime.getTime();
-    } catch {
-      return null;
-    }
-  }
-
-  async isStale(maxAgeMs = 3600000): Promise<boolean> {
-    const age = await this.getAge();
-    return age === null || age > maxAgeMs;
-  }
+  // Commented out - not used
+  // async isStale(maxAgeMs = 3600000): Promise<boolean> {
+  //   const age = await this.getAge();
+  //   return age === null || age > maxAgeMs;
+  // }
 }
 
-export class PartitionedCache {
+class PartitionedCache {
   private readonly cacheDir: string;
   private readonly metaPath: string;
   private partitions = new Map<string, CachePartition>();
@@ -136,18 +144,19 @@ export class PartitionedCache {
     }
   }
 
-  async exists(): Promise<boolean> {
-    try {
-      await fs.access(this.metaPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  // Commented out - not used
+  // async exists(): Promise<boolean> {
+  //   try {
+  //     await fs.access(this.metaPath);
+  //     return true;
+  //   } catch {
+  //     return false;
+  //   }
+  // }
 
   async loadPartition(environment: IndexFile['environment']): Promise<CachePartition | null> {
     const partitionKey = this.getPartitionKey(environment);
-    
+
     // Check memory cache first
     const cachedPartition = this.partitions.get(partitionKey);
     if (cachedPartition) {
@@ -158,7 +167,7 @@ export class PartitionedCache {
       const partitionPath = this.getPartitionPath(partitionKey);
       const content = await fs.readFile(partitionPath, 'utf-8');
       const partition = JSON.parse(content) as CachePartition;
-      
+
       // Cache in memory
       this.partitions.set(partitionKey, partition);
       return partition;
@@ -172,17 +181,17 @@ export class PartitionedCache {
 
   async savePartition(scanResult: ScanResult, maxAgeMs = 3600000): Promise<void> {
     await this.ensureCacheDir();
-    
+
     const partitionKey = this.getPartitionKey(scanResult.environment);
     const now = new Date();
     const validityTimestamp = new Date(now.getTime() + maxAgeMs).toISOString();
-    
+
     const packageTimestamps: Record<string, string> = {};
     const scanTime = scanResult.scanTime;
     for (const packageName of Object.keys(scanResult.packages)) {
       packageTimestamps[packageName] = scanTime;
     }
-    
+
     const partition: CachePartition = {
       environment: scanResult.environment,
       packages: scanResult.packages,
@@ -199,10 +208,10 @@ export class PartitionedCache {
       // Write partition atomically
       await fs.writeFile(tempPath, JSON.stringify(partition, null, 2), 'utf-8');
       await fs.rename(tempPath, partitionPath);
-      
+
       // Update memory cache
       this.partitions.set(partitionKey, partition);
-      
+
       // Update metadata
       await this.updateMetadata(partitionKey, scanResult.scanTime);
     } catch (error) {
@@ -227,7 +236,10 @@ export class PartitionedCache {
     }
   }
 
-  async isPartitionStale(environment: IndexFile['environment'], maxAgeMs = 3600000): Promise<boolean> {
+  async isPartitionStale(
+    environment: IndexFile['environment'],
+    maxAgeMs = 3600000,
+  ): Promise<boolean> {
     const partition = await this.loadPartition(environment);
     if (!partition) {
       return true; // No partition means stale
@@ -248,7 +260,7 @@ export class PartitionedCache {
   private async updateMetadata(partitionKey: string, lastUpdated: string): Promise<void> {
     try {
       let metadata: Record<string, { lastUpdated: string }> = {};
-      
+
       try {
         const content = await fs.readFile(this.metaPath, 'utf-8');
         metadata = JSON.parse(content) as Record<string, { lastUpdated: string }>;
@@ -277,22 +289,119 @@ export class PartitionedCache {
     return Buffer.from(key).toString('base64');
   }
 
-  // Convert from old IndexFile format to partitioned cache for backward compatibility
-  async migrateFromIndexFile(indexFile: IndexFile): Promise<void> {
-    const scanResult: ScanResult = {
-      success: true,
-      environment: indexFile.environment,
-      packages: indexFile.packages,
-      scanTime: indexFile.lastUpdated,
-      summary: {
-        total: Object.keys(indexFile.packages).length,
-        filtered: Object.keys(indexFile.packages).length,
-        languages: { [indexFile.environment.type.includes('npm') || indexFile.environment.type.includes('yarn') || indexFile.environment.type.includes('pnpm') ? 'javascript' : 'python']: Object.keys(indexFile.packages).length },
-        categories: { production: 0, development: Object.keys(indexFile.packages).length },
-      },
-    };
+  // Commented out - not used
+  // // Convert from old IndexFile format to partitioned cache for backward compatibility
+  // async migrateFromIndexFile(indexFile: IndexFile): Promise<void> {
+  //   const scanResult: ScanResult = {
+  //     success: true,
+  //     environment: indexFile.environment,
+  //     packages: indexFile.packages,
+  //     scanTime: indexFile.lastUpdated,
+  //     summary: {
+  //       total: Object.keys(indexFile.packages).length,
+  //       filtered: Object.keys(indexFile.packages).length,
+  //       languages: {
+  //         [indexFile.environment.type.includes('npm') ||
+  //         indexFile.environment.type.includes('yarn') ||
+  //         indexFile.environment.type.includes('pnpm')
+  //           ? 'javascript'
+  //           : 'python']: Object.keys(indexFile.packages).length,
+  //       },
+  //       categories: { production: 0, development: Object.keys(indexFile.packages).length },
+  //     },
+  //   };
+  //
+  //   // Use a shorter validity period for migrated data to encourage fresh scan
+  //   await this.savePartition(scanResult, 1800000); // 30 minutes instead of 1 hour
+  // }
+}
 
-    // Use a shorter validity period for migrated data to encourage fresh scan
-    await this.savePartition(scanResult, 1800000); // 30 minutes instead of 1 hour
+/**
+ * Unified cache that uses SQLite when available, falls back to PartitionedCache
+ */
+export class UnifiedCache {
+  private readonly cache: SQLiteCache | PartitionedCache;
+  private readonly usingSQLite: boolean;
+
+  constructor(basePath: string = process.cwd()) {
+    // Ensure cache directory exists
+    const cacheDir = join(basePath, CACHE_DIR_NAME);
+    if (!existsSync(cacheDir)) {
+      mkdirSync(cacheDir, { recursive: true });
+    }
+
+    // Check if better-sqlite3 module exists
+    const sqliteAvailable = existsSync(join(process.cwd(), 'node_modules', 'better-sqlite3'));
+
+    if (sqliteAvailable) {
+      try {
+        this.cache = new SQLiteCache({
+          dbPath: join(cacheDir, 'cache.db'), // Store in .pkg-local-cache/
+          maxAge: 3600, // 1 hour in seconds
+          enableWAL: true,
+          enableFileCache: false,
+        });
+        this.usingSQLite = true;
+        console.error('[CACHE] Using SQLite cache for high performance');
+      } catch (error) {
+        // Fallback if SQLite initialization fails
+        console.error('[CACHE] SQLite initialization failed, falling back to JSON cache:', error);
+        this.cache = new PartitionedCache(basePath);
+        this.usingSQLite = false;
+      }
+    } else {
+      this.cache = new PartitionedCache(basePath);
+      this.usingSQLite = false;
+      console.error('[CACHE] Using JSON cache (install better-sqlite3 for 40x faster performance)');
+    }
+  }
+
+  async save(scanResult: ScanResult): Promise<void> {
+    if (this.usingSQLite) {
+      const sqliteCache = this.cache as SQLiteCache;
+      const partitionKey = this.getPartitionKey(scanResult.environment);
+      sqliteCache.save(partitionKey, scanResult);
+    } else {
+      await (this.cache as PartitionedCache).savePartition(scanResult);
+    }
+  }
+
+  async load(environment: IndexFile['environment']): Promise<ScanResult | null> {
+    if (this.usingSQLite) {
+      const sqliteCache = this.cache as SQLiteCache;
+      const partitionKey = this.getPartitionKey(environment);
+      return sqliteCache.get(partitionKey);
+    } else {
+      const partition = await (this.cache as PartitionedCache).loadPartition(environment);
+      if (!partition) return null;
+
+      return {
+        success: true,
+        packages: partition.packages,
+        environment: partition.environment,
+        scanTime: partition.lastUpdated,
+      };
+    }
+  }
+
+  async isStale(environment: IndexFile['environment'], maxAgeMs = 3600000): Promise<boolean> {
+    if (this.usingSQLite) {
+      const sqliteCache = this.cache as SQLiteCache;
+      const partitionKey = this.getPartitionKey(environment);
+      return !sqliteCache.isValid(partitionKey);
+    } else {
+      return (this.cache as PartitionedCache).isPartitionStale(environment, maxAgeMs);
+    }
+  }
+
+  private getPartitionKey(environment: IndexFile['environment']): string {
+    return `${environment.type}-${environment.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  }
+
+  // Clean up resources when done
+  close(): void {
+    if (this.usingSQLite) {
+      (this.cache as SQLiteCache).close();
+    }
   }
 }

@@ -161,10 +161,14 @@ export function createServer(): Server {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({
-                  error: `Unknown tool: ${name}`,
-                  availableTools: tools.map(t => t.name),
-                }, null, 2),
+                text: JSON.stringify(
+                  {
+                    error: `Unknown tool: ${name}`,
+                    availableTools: tools.map((t) => t.name),
+                  },
+                  null,
+                  2,
+                ),
               },
             ],
           };
@@ -174,8 +178,8 @@ export function createServer(): Server {
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const suggestion =
-        error instanceof Error && 'suggestion' in error 
-          ? (error as { suggestion?: string }).suggestion 
+        error instanceof Error && 'suggestion' in error
+          ? (error as { suggestion?: string }).suggestion
           : undefined;
 
       return {

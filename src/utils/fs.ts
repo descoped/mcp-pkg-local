@@ -112,4 +112,3 @@ export function sanitizePath(basePath: string, requestedPath: string): string {
 
   return resolved;
 }
-

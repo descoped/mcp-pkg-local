@@ -2,14 +2,15 @@ import { BaseScanner } from '#scanners/base';
 import type { ScanResult, PackageInfo, EnvironmentInfo } from '#types';
 import { NodeEnvironmentNotFoundError } from '#types';
 import { join, dirname } from 'node:path';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { PackageScorer } from '#utils/package-scorer';
 
 export class NodeJSScanner extends BaseScanner {
   // LanguageScanner required properties
   readonly language = 'javascript' as const;
   readonly supportedPackageManagers = ['npm', 'pnpm', 'yarn', 'bun'] as const;
   readonly supportedExtensions = ['.js', '.ts', '.mjs', '.cjs', '.jsx', '.tsx', '.json'] as const;
-  
+
   private projectRoot: string | null = null;
   private nodeModulesPath: string | null = null;
   private packageCache = new Map<string, PackageInfo>();
@@ -17,6 +18,7 @@ export class NodeJSScanner extends BaseScanner {
   private developmentDeps = new Set<string>();
 
   async scan(): Promise<ScanResult> {
+    const startTime = Date.now();
     this.log('Starting Node.js environment scan');
 
     // Find package.json (project root)
@@ -43,12 +45,20 @@ export class NodeJSScanner extends BaseScanner {
     await this.loadDependencyCategories();
 
     // Scan packages
-    const packages = await this.scanPackages();
+    let packages = await this.scanPackages();
+
+    // Apply relevance scoring to all packages
+    packages = PackageScorer.scorePackages(packages, this.projectRoot);
+
+    const scanDuration = Date.now() - startTime;
 
     return {
       success: true,
       packages,
-      environment,
+      environment: {
+        ...environment,
+        scanDurationMs: scanDuration,
+      },
       scanTime: new Date().toISOString(),
     };
   }
@@ -116,12 +126,17 @@ export class NodeJSScanner extends BaseScanner {
   }
 
   async getEnvironmentInfo(): Promise<EnvironmentInfo> {
+    // Ensure we have found the project root
     if (!this.projectRoot) {
-      throw new Error('Project root not found');
+      const projectPath = await this.findPackageJson();
+      if (!projectPath) {
+        throw new Error('Project root not found');
+      }
+      this.projectRoot = projectPath;
     }
 
     // Use detectPackageManager method
-    const packageManager = await this.detectPackageManager() ?? 'npm';
+    const packageManager = (await this.detectPackageManager()) ?? 'npm';
 
     // Get Node.js version if possible
     let nodeVersion: string;
@@ -150,13 +165,8 @@ export class NodeJSScanner extends BaseScanner {
 
   async getLockFilePath(): Promise<string | null> {
     const root = this.projectRoot ?? this.basePath;
-    const lockFiles = [
-      'package-lock.json',
-      'pnpm-lock.yaml', 
-      'yarn.lock',
-      'bun.lockb'
-    ];
-    
+    const lockFiles = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lockb'];
+
     for (const lockFile of lockFiles) {
       const path = join(root, lockFile);
       if (await this.pathExists(path)) {
@@ -168,7 +178,7 @@ export class NodeJSScanner extends BaseScanner {
 
   private async findPackageJson(): Promise<string | null> {
     let currentPath = this.basePath;
-    
+
     // Look for package.json in current directory and parents
     while (currentPath !== dirname(currentPath)) {
       const packageJsonPath = join(currentPath, 'package.json');
@@ -202,7 +212,7 @@ export class NodeJSScanner extends BaseScanner {
         // Handle scoped packages (@scope/package)
         if (entryName.startsWith('@')) {
           const scopedEntries = await readdir(entryPath, { withFileTypes: true });
-          
+
           for (const scopedEntry of scopedEntries) {
             if (!scopedEntry.isDirectory()) {
               continue;
@@ -211,7 +221,7 @@ export class NodeJSScanner extends BaseScanner {
             const packageName = `${entryName}/${scopedEntry.name}`;
             const packagePath = join(entryPath, scopedEntry.name);
             const packageInfo = await this.extractPackageInfo(packageName, packagePath);
-            
+
             if (packageInfo) {
               packages[packageName] = packageInfo;
               this.packageCache.set(packageName, packageInfo);
@@ -220,7 +230,7 @@ export class NodeJSScanner extends BaseScanner {
         } else {
           // Regular package
           const packageInfo = await this.extractPackageInfo(entryName, entryPath);
-          
+
           if (packageInfo) {
             packages[entryName] = packageInfo;
             this.packageCache.set(entryName, packageInfo);
@@ -253,13 +263,15 @@ export class NodeJSScanner extends BaseScanner {
       const entryPoints = [
         parsed.main,
         parsed.module,
-        (typeof parsed.exports === 'object' && parsed.exports !== null && '.' in parsed.exports
-          ? typeof parsed.exports['.'] === 'object' && parsed.exports['.'] !== null && 'default' in parsed.exports['.']
+        typeof parsed.exports === 'object' && parsed.exports !== null && '.' in parsed.exports
+          ? typeof parsed.exports['.'] === 'object' &&
+            parsed.exports['.'] !== null &&
+            'default' in parsed.exports['.']
             ? (parsed.exports['.'] as { default?: string }).default
             : typeof parsed.exports['.'] === 'string'
-            ? parsed.exports['.']
-            : undefined
-          : undefined),
+              ? parsed.exports['.']
+              : undefined
+          : undefined,
         'index.js',
         'index.ts',
         'index.mjs',
@@ -284,7 +296,7 @@ export class NodeJSScanner extends BaseScanner {
 
   private async loadDependencyCategories(): Promise<void> {
     if (!this.projectRoot) return;
-    
+
     try {
       const packageJsonPath = join(this.projectRoot, 'package.json');
       const packageJson = await readFile(packageJsonPath, 'utf-8');
@@ -292,22 +304,24 @@ export class NodeJSScanner extends BaseScanner {
         dependencies?: Record<string, string>;
         devDependencies?: Record<string, string>;
       };
-      
+
       // Load production dependencies
       if (parsed.dependencies) {
         for (const dep of Object.keys(parsed.dependencies)) {
           this.productionDeps.add(dep);
         }
       }
-      
+
       // Load development dependencies
       if (parsed.devDependencies) {
         for (const dep of Object.keys(parsed.devDependencies)) {
           this.developmentDeps.add(dep);
         }
       }
-      
-      this.log(`Loaded ${this.productionDeps.size} production and ${this.developmentDeps.size} development dependencies`);
+
+      this.log(
+        `Loaded ${this.productionDeps.size} production and ${this.developmentDeps.size} development dependencies`,
+      );
     } catch (error) {
       this.log('Failed to load dependency categories:', error);
     }
@@ -318,7 +332,7 @@ export class NodeJSScanner extends BaseScanner {
     if (packageName.startsWith('@types/')) {
       return 'development';
     }
-    
+
     // Check against loaded dependencies
     if (this.productionDeps.has(packageName)) {
       return 'production';
@@ -326,40 +340,109 @@ export class NodeJSScanner extends BaseScanner {
     if (this.developmentDeps.has(packageName)) {
       return 'development';
     }
-    
+
     // If not in either, it might be a transitive dependency
     // We'll leave it undefined for now
     return undefined;
   }
 
-  private async extractPackageInfo(packageName: string, packagePath: string): Promise<PackageInfo | null> {
+  private async extractPackageInfo(
+    packageName: string,
+    packagePath: string,
+  ): Promise<PackageInfo | null> {
     try {
       const packageJsonPath = join(packagePath, 'package.json');
-      
+
       if (!(await this.pathExists(packageJsonPath))) {
         return null;
       }
 
       const packageJson = await readFile(packageJsonPath, 'utf-8');
-      const parsed = JSON.parse(packageJson) as { version?: string };
+      const parsed = JSON.parse(packageJson) as {
+        version?: string;
+        main?: string;
+        types?: string;
+        typings?: string;
+      };
 
       // Store relative path from project root
-      const relativePath = packagePath.replace(this.basePath + '/', '').replace(this.basePath + '\\', '');
-      
+      const relativePath = packagePath
+        .replace(this.basePath + '/', '')
+        .replace(this.basePath + '\\', '');
+
       // Determine category
       const category = this.getPackageCategory(packageName);
-      
-      return {
+
+      // Check if package is a direct dependency
+      const isDirectDependency =
+        this.productionDeps.has(packageName) || this.developmentDeps.has(packageName);
+
+      // Check for TypeScript definitions
+      const hasTypes = Boolean(parsed.types ?? parsed.typings ?? packageName.startsWith('@types/'));
+
+      // Get package size
+      let sizeBytes = 0;
+      let fileCount = 0;
+      try {
+        const stats = await this.getPackageStats(packagePath);
+        sizeBytes = stats.size;
+        fileCount = stats.files;
+      } catch {
+        // Ignore errors in size calculation
+      }
+
+      // Find main file
+      const mainFile = (await this.getPackageMainFile(packageName)) ?? undefined;
+
+      const result: PackageInfo = {
         name: packageName,
         version: parsed.version ?? 'unknown',
         location: relativePath,
         language: 'javascript',
         packageManager: undefined, // Will be filled by the environment detection
         category,
+        isDirectDependency,
+        hasTypes,
+        sizeBytes,
+        fileCount,
       };
+
+      if (mainFile) {
+        result.mainFile = mainFile;
+      }
+
+      return result;
     } catch (error) {
       this.log(`Failed to extract info from ${packagePath}:`, error);
       return null;
     }
+  }
+
+  private async getPackageStats(packagePath: string): Promise<{ size: number; files: number }> {
+    let totalSize = 0;
+    let fileCount = 0;
+
+    async function walkDir(dir: string): Promise<void> {
+      const entries = await readdir(dir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name);
+
+        if (entry.isDirectory() && entry.name !== 'node_modules') {
+          await walkDir(fullPath);
+        } else if (entry.isFile()) {
+          try {
+            const stats = await stat(fullPath);
+            totalSize += stats.size;
+            fileCount++;
+          } catch {
+            // Ignore inaccessible files
+          }
+        }
+      }
+    }
+
+    await walkDir(packagePath);
+    return { size: totalSize, files: fileCount };
   }
 }

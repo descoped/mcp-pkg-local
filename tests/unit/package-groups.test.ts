@@ -62,10 +62,10 @@ describe('Package Groups', () => {
     it('should return all groups a package belongs to', () => {
       const zodGroups = getPackageGroups('zod');
       expect(zodGroups).toContain('typescript');
-      
+
       const eslintGroups = getPackageGroups('eslint');
       expect(eslintGroups).toContain('linting');
-      
+
       const viteGroups = getPackageGroups('vite');
       expect(viteGroups).toContain('building');
     });

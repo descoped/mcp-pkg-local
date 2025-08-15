@@ -8,6 +8,13 @@ export type PackageInfo = {
   language: 'python' | 'javascript';
   packageManager?: string | undefined;
   category?: 'production' | 'development' | undefined;
+  relevanceScore?: number;
+  popularityScore?: number;
+  fileCount?: number;
+  sizeBytes?: number;
+  mainFile?: string;
+  hasTypes?: boolean;
+  isDirectDependency?: boolean;
 };
 
 // Environment information
@@ -17,6 +24,7 @@ export type EnvironmentInfo = {
   pythonVersion?: string | undefined;
   nodeVersion?: string | undefined;
   packageManager?: string | undefined;
+  scanDurationMs?: number;
 };
 
 // Scan result
@@ -34,7 +42,7 @@ export type ScanResult = {
 };
 
 // Read package result
-export type ReadPackageResult = 
+export type ReadPackageResult =
   | {
       type: 'tree';
       success: true;
@@ -71,13 +79,16 @@ export const IndexFileSchema = z.object({
     nodeVersion: z.string().optional(),
     packageManager: z.string().optional(),
   }),
-  packages: z.record(z.string(), z.object({
-    name: z.string(),
-    version: z.string(),
-    location: z.string(),
-    language: z.enum(['python', 'javascript']),
-    packageManager: z.string().optional(),
-  })),
+  packages: z.record(
+    z.string(),
+    z.object({
+      name: z.string(),
+      version: z.string(),
+      location: z.string(),
+      language: z.enum(['python', 'javascript']),
+      packageManager: z.string().optional(),
+    }),
+  ),
 });
 
 export type IndexFile = z.infer<typeof IndexFileSchema>;
@@ -88,9 +99,16 @@ export const ScanPackagesParamsSchema = z.object({
   filter: z.string().optional().describe('Regex pattern to filter package names'),
   limit: z.number().optional().default(50).describe('Maximum number of packages to return'),
   summary: z.boolean().optional().default(false).describe('Return only summary counts'),
-  category: z.enum(['production', 'development', 'all']).optional().default('all').describe('Filter by package category'),
+  category: z
+    .enum(['production', 'development', 'all'])
+    .optional()
+    .default('all')
+    .describe('Filter by package category'),
   includeTypes: z.boolean().optional().default(true).describe('Include @types packages'),
-  group: z.enum(['testing', 'building', 'linting', 'typescript', 'framework', 'utility']).optional().describe('Filter by predefined package group'),
+  group: z
+    .enum(['testing', 'building', 'linting', 'typescript', 'framework', 'utility'])
+    .optional()
+    .describe('Filter by predefined package group'),
 });
 
 export type ScanPackagesParams = z.infer<typeof ScanPackagesParamsSchema>;
@@ -98,7 +116,11 @@ export type ScanPackagesParams = z.infer<typeof ScanPackagesParamsSchema>;
 export const ReadPackageParamsSchema = z.object({
   packageName: z.string().min(1),
   filePath: z.string().optional(),
-  includeTree: z.boolean().optional().default(false).describe('Include full file tree (default: false, only main files)'),
+  includeTree: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Include full file tree (default: false, only main files)'),
   maxDepth: z.number().optional().default(2).describe('Maximum depth for file tree traversal'),
   pattern: z.string().optional().describe('Glob pattern to filter files (e.g., "*.ts", "src/**")'),
 });
@@ -123,16 +145,16 @@ export interface Scanner {
 export interface LanguageScanner extends Scanner {
   /** The language this scanner supports */
   readonly language: 'python' | 'javascript' | 'go' | 'rust' | 'java';
-  
+
   /** Supported package managers for this language */
   readonly supportedPackageManagers: readonly string[];
-  
+
   /** File extensions this language uses */
   readonly supportedExtensions: readonly string[];
-  
+
   /** Check if this scanner can handle the given directory */
   canHandle(basePath: string): Promise<boolean>;
-  
+
   /** Get the main/entry file for a package (language-specific) */
   getPackageMainFile?(packageName: string): Promise<string | null>;
 }
@@ -143,10 +165,10 @@ export interface LanguageScanner extends Scanner {
 export interface PackageManagerScanner {
   /** Detect which package manager is being used */
   detectPackageManager(): Promise<string | null>;
-  
+
   /** Get lock file path if it exists */
   getLockFilePath?(): Promise<string | null>;
-  
+
   /** Check if dependencies are installed */
   isDependenciesInstalled(): Promise<boolean>;
 }
@@ -171,7 +193,11 @@ export class EnvironmentNotFoundError extends McpError {
 
 export class NodeEnvironmentNotFoundError extends McpError {
   constructor(message = 'No Node.js project found') {
-    super(message, 'NODE_ENV_NOT_FOUND', 'Ensure package.json exists and run "npm install" to install dependencies');
+    super(
+      message,
+      'NODE_ENV_NOT_FOUND',
+      'Ensure package.json exists and run "npm install" to install dependencies',
+    );
   }
 }
 
@@ -189,4 +215,105 @@ export class FileNotFoundError extends McpError {
   constructor(filePath: string) {
     super(`File "${filePath}" not found`, 'FILE_NOT_FOUND');
   }
+}
+
+// SQLite Cache Types
+
+export interface SQLiteCacheConfig {
+  dbPath: string;
+  maxAge: number; // seconds
+  enableWAL: boolean;
+  enableFileCache: boolean;
+}
+
+export interface CacheEnvironment {
+  id: number;
+  partitionKey: string;
+  projectPath: string;
+  language: 'python' | 'javascript';
+  packageManager?: string;
+  lastScan: Date;
+  scanDurationMs?: number;
+  metadata: EnvironmentInfo;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Commented out - was used by advanced SQLiteCache methods
+// export interface CachePackage {
+//   id: number;
+//   environmentId: number;
+//   name: string;
+//   version: string;
+//   location: string;
+//   language: 'python' | 'javascript';
+//   category?: 'production' | 'development';
+//   relevanceScore: number;
+//   popularityScore: number;
+//   fileCount?: number;
+//   sizeBytes?: number;
+//   mainFile?: string;
+//   hasTypes: boolean;
+//   isDirectDependency: boolean;
+//   metadata: PackageInfo;
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
+
+// Commented out - was used by SQLiteQueryBuilder
+// export interface PackageQueryOptions {
+//   limit?: number;
+//   offset?: number;
+//   filter?: string; // regex pattern
+//   category?: 'production' | 'development' | 'all';
+//   includeTypes?: boolean;
+//   sortBy?: 'relevance' | 'name' | 'popularity';
+//   sortOrder?: 'asc' | 'desc';
+//   minRelevanceScore?: number;
+//   directOnly?: boolean;
+// }
+
+// Commented out - was used by SQLiteCache.getStats()
+// export interface CacheStats {
+//   environments: number;
+//   packages: number;
+//   avgScanDuration: number;
+//   latestScan: Date;
+//   cacheSize: number; // bytes
+//   hitRate?: number;
+// }
+
+// Database row types for better-sqlite3
+export interface EnvironmentRow {
+  id: number;
+  partition_key: string;
+  project_path: string;
+  language: string;
+  package_manager: string | null;
+  last_scan: string;
+  scan_duration_ms: number | null;
+  metadata: Buffer;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PackageRow {
+  id: number;
+  environment_id: number;
+  name: string;
+  version: string;
+  location: string;
+  language: string;
+  category: string | null;
+  relevance_score: number;
+  popularity_score: number;
+  file_count: number | null;
+  size_bytes: number | null;
+  main_file: string | null;
+  has_types: number;
+  is_direct_dependency: number;
+  metadata: Buffer;
+  created_at: string;
+  updated_at: string;
+  similarity_score?: number;
 }

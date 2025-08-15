@@ -29,8 +29,8 @@ async function createMockPythonEnvironment(): Promise<string> {
       files: {
         '__init__.py': '"""Requests HTTP Library"""\\n__version__ = "2.31.0"',
         'api.py': 'def get(url, **kwargs): pass',
-        'models.py': 'class Response: pass'
-      }
+        'models.py': 'class Response: pass',
+      },
     },
     {
       name: 'flask',
@@ -38,8 +38,8 @@ async function createMockPythonEnvironment(): Promise<string> {
       files: {
         '__init__.py': 'from .app import Flask\\n__version__ = "3.0.0"',
         'app.py': 'class Flask: pass',
-        'blueprints.py': 'class Blueprint: pass'
-      }
+        'blueprints.py': 'class Blueprint: pass',
+      },
     },
     {
       name: 'sqlalchemy',
@@ -47,17 +47,17 @@ async function createMockPythonEnvironment(): Promise<string> {
       files: {
         '__init__.py': '"""SQLAlchemy ORM"""\\n__version__ = "2.0.23"',
         'orm/__init__.py': 'from .session import Session',
-        'orm/session.py': 'class Session: pass'
-      }
+        'orm/session.py': 'class Session: pass',
+      },
     },
     {
       name: 'pydantic',
       version: '2.5.0',
       files: {
         '__init__.py': '"""Data validation using Python type annotations"""',
-        'main.py': 'class BaseModel: pass'
-      }
-    }
+        'main.py': 'class BaseModel: pass',
+      },
+    },
   ];
 
   // Create package directories and dist-info
@@ -89,8 +89,11 @@ License: MIT
   }
 
   // Create project files to help with detection
-  await fs.writeFile(join(testDir, 'requirements.txt'), 'requests==2.31.0\\nflask==3.0.0\\nsqlalchemy==2.0.23\\npydantic==2.5.0');
-  
+  await fs.writeFile(
+    join(testDir, 'requirements.txt'),
+    'requests==2.31.0\\nflask==3.0.0\\nsqlalchemy==2.0.23\\npydantic==2.5.0',
+  );
+
   return testDir;
 }
 
@@ -157,7 +160,7 @@ describe('Python Virtual Environment Integration (Mock)', () => {
         expect(result.success).toBe(true);
         expect(result.environment.type).toBe('.venv');
         expect(Object.keys(result.packages).length).toBe(4);
-        
+
         // Verify all expected packages are present
         expect(result.packages).toHaveProperty('requests');
         expect(result.packages).toHaveProperty('flask');
