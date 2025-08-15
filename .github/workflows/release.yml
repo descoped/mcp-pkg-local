@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -16,6 +15,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Validate tag format
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+(\.[0-9]+)?)?$ ]]; then
+            echo "❌ Invalid tag format: $TAG"
+            echo "Expected format: vX.Y.Z or vX.Y.Z-beta.N (e.g., v1.2.3, v1.2.3-beta.1)"
+            exit 1
+          fi
+          echo "✅ Tag format is valid: $TAG"
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,17 +47,15 @@ jobs:
       - name: Build
         run: npm run build
       
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-      
       - name: Publish to npm
         run: |
-          if [[ "${{ github.ref }}" == *"-beta"* ]]; then
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ "$TAG" == *"-beta"* ]]; then
             npm publish --provenance --access public --tag beta
+            echo "✅ Published beta version to npm"
           else
             npm publish --provenance --access public
+            echo "✅ Published stable version to npm"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
