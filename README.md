@@ -1,5 +1,6 @@
 # mcp-pkg-local
 
+[![CI](https://github.com/descoped/mcp-pkg-local/actions/workflows/ci.yml/badge.svg)](https://github.com/descoped/mcp-pkg-local/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP Tool](https://img.shields.io/badge/MCP-Tool-green.svg)](https://modelcontextprotocol.io)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg)](https://nodejs.org)

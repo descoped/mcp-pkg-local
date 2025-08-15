@@ -1,0 +1,56 @@
+# Development files
+CLAUDE.md
+ai_docs/
+.claude/
+
+# Source files (only dist is published)
+src/
+scripts/
+
+# Test files
+tests/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Config files
+tsconfig.json
+tsconfig.build.json
+eslint.config.js
+vitest.config.ts
+.editorconfig
+
+# Git and CI
+.git/
+.github/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and cache
+.env
+.env.local
+.pkg-local-index.json
+*.log
+
+# Build artifacts (except dist)
+*.tsbuildinfo
+node_modules/
+
+# Documentation source
+docs/
+examples/
+
+# Python test environments
+.venv/
+venv/
+__pycache__/
+*.pyc
