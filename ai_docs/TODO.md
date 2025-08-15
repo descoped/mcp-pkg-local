@@ -61,15 +61,7 @@
 - [ ] Support for other languages (JavaScript/Node.js, Go, Rust) - Note: Node.js support completed in v0.1.0
 
 ## Phase 11: Node.js Support Extension
-### Break down nodejs-support-plan.md into implementation tasks
-- [ ] Analyze nodejs-support-plan.md minimal requirements - COMPLETED (implemented)
-- [ ] Create task breakdown for NodeJSScanner implementation - COMPLETED (implemented)
-- [ ] Define specific changes needed for src/scanners/nodejs.ts - COMPLETED (implemented)
-- [ ] Plan server.ts integration for multi-language detection - COMPLETED (implemented)
-- [ ] Design types.ts updates for javascript language support - COMPLETED (implemented)
-- [ ] Create test plan for node_modules scanning - COMPLETED (implemented)
-- [ ] Document integration approach with existing architecture - COMPLETED (implemented)
-- [ ] Sync implementation tasks with TodoWrite tool - COMPLETED (implemented)
+### ✅ All Node.js support tasks completed - See .claude/history/20250815_195901_completed-tasks.md
 
 ## Success Metrics (To Be Measured)
 - [ ] LLM can generate Python code that runs without import errors
@@ -81,8 +73,8 @@
 - [ ] All TypeScript strict mode checks pass
 - [ ] No runtime type errors in production
 
-## v0.1.1 Performance Tasks (In Progress)
-- [ ] Add performance benchmarking vs JSON cache
+## v0.1.1 Performance Tasks
+### ✅ All v0.1.1 tasks completed - See .claude/history/20250815_195901_completed-tasks.md
 
 ## Notes
 - Most "future enhancement" tasks are low priority

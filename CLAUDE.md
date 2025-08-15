@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **User Confirmation Required**: Never carry out tasks without the user's explicit confirmation after planning. Never assume random stuff and always stick to the single source of truth: the codebase. Never violate these rules.
 
+**AI Documentation Migration Rule**: When migrating documents from `ai_docs/` to `.claude/history/`:
+0. FIRST validate status in all documents and mark completed tasks as COMPLETED
+1. ALWAYS use UTC datetime format for filenames: `YYYYMMDD_HHMMSS_original-filename.md`
+2. ONLY migrate documents where ALL tasks are COMPLETED
+3. For `TODO.md`: Extract ONLY completed tasks to history, keep non-completed tasks in `ai_docs/TODO.md`
+4. NEVER migrate documents with pending/incomplete work
+5. ALWAYS verify task completion status before migration
+
 **Compatibility Strategy**: This is a greenfield project. Prioritize future compatibility over backward compatibility. Current implementation plan: ai_docs/sqlite-cache-enhancement-plan.md.
 
 **Package Manager Architecture**: Python package managers are not limited to `pip`. Modern Python uses various package managers:
