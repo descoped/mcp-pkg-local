@@ -1,4 +1,4 @@
-import { IndexCache } from '#utils/cache';
+import { UnifiedCache } from '#utils/cache';
 import { detectAndCreateScanner } from '#utils/scanner-factory';
 import { readFileWithSizeCheck, generateFileTree, sanitizePath } from '#utils/fs';
 import type { ReadPackageParams, ReadPackageResult } from '#types';
@@ -15,12 +15,15 @@ export async function readPackageTool(
 
   try {
     // Get package location from cache or scan
-    const cache = new IndexCache();
+    const cache = new UnifiedCache();
     let packageLocation: string | null = null;
     let packageVersion: string | null = null;
 
-    // Try cache first
-    const cached = await cache.read();
+    // Try cache first - get environment info from scanner
+    const scanner = await detectAndCreateScanner();
+    const environment = await scanner.getEnvironmentInfo();
+    const cached = await cache.load(environment);
+    
     if (cached?.packages[packageName]) {
       packageLocation = cached.packages[packageName].location;
       packageVersion = cached.packages[packageName].version;

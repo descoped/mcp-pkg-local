@@ -29,6 +29,11 @@ async function buildProject(): Promise<void> {
     throw error; // Re-throw to be handled by the main catch
   }
 
+  // Copy SQL schema file
+  console.error('Copying SQL schema file...');
+  await fs.mkdir(join(distPath, 'schemas'), { recursive: true });
+  await fs.copyFile('src/schemas/cache-schema.sql', join(distPath, 'schemas/cache-schema.sql'));
+
   // Fix imports in the compiled JavaScript files
   console.error('Fixing imports in compiled files...');
   await fixImports(distPath);
