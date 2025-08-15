@@ -202,21 +202,29 @@ After adding, restart Claude Desktop completely. You'll see the MCP indicator (ð
 
 Once configured, the MCP server provides two main tools:
 
-### 1. scan-packages
+### Package Scanner Tools
 
-Scans and indexes all packages in your environment with powerful filtering options:
+#### Tool: scan-packages
 
-#### Basic Usage
+Scan and index all packages in the virtual environment.
+
+**Parameters:**
+- `forceRefresh` (bool) - Force rescan even if index exists
+- `filter` (string) - Regex pattern to filter package names (e.g., `^@types/`, `eslint`)
+- `limit` (number) - Max packages to return (default: 50)
+- `summary` (bool) - Return only summary counts
+- `category` (string) - Filter by production/development/all
+- `includeTypes` (bool) - Include @types packages
+- `group` (string) - Filter by group (testing, building, linting, etc.)
+
+**Examples:**
 ```javascript
 // Scan with default settings (returns 50 packages)
 scan-packages
 
 // Force refresh the cache
 scan-packages --forceRefresh
-```
 
-#### Advanced Filtering (v0.1.1+)
-```javascript
 // Get summary only (token-efficient)
 scan-packages --summary
 // Returns: { total: 304, languages: { javascript: 304 }, categories: { production: 12, development: 292 } }
@@ -242,11 +250,18 @@ scan-packages --includeTypes false
 scan-packages --limit 10  // Return only 10 packages
 ```
 
-### 2. read-package
+#### Tool: read-package
 
-Read source files from installed packages with lazy loading for efficiency:
+Read source files from a specific package.
 
-#### Basic Usage
+**Parameters:**
+- `packageName` (string, required) - Package name to read
+- `filePath` (string) - Specific file within package
+- `includeTree` (bool) - Include full file tree (default: false)
+- `maxDepth` (number) - Max depth for tree traversal (default: 2)
+- `pattern` (string) - Glob pattern to filter files (e.g., `*.ts`, `src/**`)
+
+**Examples:**
 ```javascript
 // Get main files only (default - very efficient)
 read-package express
@@ -254,10 +269,7 @@ read-package express
 
 // Read specific file
 read-package express lib/router/index.js
-```
 
-#### Advanced Options (v0.1.1+)
-```javascript
 // Get full file tree
 read-package express --includeTree
 
