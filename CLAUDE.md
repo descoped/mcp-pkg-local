@@ -15,20 +15,13 @@ All these package managers install packages into the same virtual environment st
 
 ## Project Overview
 
-This is an MCP (Model Context Protocol) tool called `mcp-pkg-local` that helps LLMs understand locally installed package source code. The project is in early development stage - only documentation exists, no implementation yet.
+This is an MCP (Model Context Protocol) tool called `mcp-pkg-local` that helps LLMs understand locally installed package source code. The project is complete and ready for v0.1.0 release.
 
-**Purpose**: Eliminate API hallucinations by providing LLMs with direct access to actual installed package source code rather than relying on training data.
+**Purpose**: Help reduce API hallucinations by providing LLMs with direct access to actual installed package source code rather than relying on training data.
 
 ## Development Commands
 
-Since the project is not yet initialized, first run:
-```bash
-npm init -y
-npm install --save-dev typescript @types/node tsx vitest @vitest/ui eslint prettier
-npm install @modelcontextprotocol/sdk
-```
-
-Once initialized, use these commands:
+The project is fully initialized. Use these commands:
 ```bash
 npm run dev       # Development mode with watch
 npm run build     # Compile TypeScript to dist/
@@ -44,20 +37,22 @@ The project follows a modular MCP server architecture:
 - **Entry Point**: `src/index.ts` - MCP server initialization
 - **Core Server**: `src/server.ts` - MCP protocol implementation
 - **Tools**: `src/tools/` - MCP tool implementations (scan-packages, read-package)
-- **Scanners**: `src/scanners/` - Language-specific package scanners (Python first)
+- **Scanners**: `src/scanners/` - Language-specific package scanners (Python, Node.js)
 - **Utils**: `src/utils/` - File system operations and caching
 
 ### Key MCP Tools
 
-1. **scan-packages**: Indexes all packages in virtual environment
-   - Scans `.venv` or `venv` directories
-   - Extracts version info from `.dist-info`
+1. **scan-packages**: Indexes all packages in environment
+   - Scans Python `.venv`/`venv` directories
+   - Scans Node.js `node_modules` directories
+   - Auto-detects project type
    - Returns package list with metadata
 
 2. **read-package**: Navigates and reads package source files
    - Accepts package name and optional file path
    - Returns file tree or specific file content
    - Supports navigation through package structure
+   - Works with both Python and JavaScript/TypeScript files
 
 ## Implementation Guidelines
 
@@ -99,5 +94,5 @@ The project has a complete working implementation with:
 - This is an AI-focused tool designed for LLM consumption
 - Keep responses minimal - let LLMs interpret the source code
 - Prioritize accuracy over features
-- Python support is the primary goal before expanding to other languages
-- The tool should work seamlessly with Claude Desktop and other MCP clients
+- Both Python and Node.js/JavaScript are fully supported
+- The tool works seamlessly with Claude Desktop, Claude Code, Gemini CLI, Cursor, and other MCP clients

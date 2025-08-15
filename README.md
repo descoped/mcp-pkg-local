@@ -6,7 +6,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7%2B-blue.svg)](https://www.typescriptlang.org)
 
-An MCP (Model Context Protocol) server that enables LLMs to read and understand locally installed package source code, eliminating API hallucinations by providing direct access to actual installed packages.
+An MCP (Model Context Protocol) server that enables LLMs to read and understand locally installed package source code, helping reduce API hallucinations by providing direct access to actual installed packages.
 
 ## Features
 
@@ -39,24 +39,11 @@ npx @descoped/mcp-pkg-local
 
 ## MCP Client Configuration
 
-### Claude Desktop
+### CLI-Based Code Assistants
 
-Add to your Claude Desktop configuration:
+#### Claude Code (claude.ai)
 
-```json
-{
-  "mcpServers": {
-    "pkg-local": {
-      "command": "npx",
-      "args": ["@descoped/mcp-pkg-local"]
-    }
-  }
-}
-```
-
-### Claude Code
-
-Add `.mcp.json` to your project root:
+Create `.mcp.json` in your project root:
 
 ```json
 {
@@ -72,16 +59,18 @@ Add `.mcp.json` to your project root:
 }
 ```
 
-### Local Development with Claude Code
+Or use the CLI:
+```bash
+claude mcp add pkg-local -- npx @descoped/mcp-pkg-local
+```
 
-For local testing with Claude Code, use the built version:
-
+For local development/testing with the built version:
 ```json
 {
   "mcpServers": {
     "pkg-local": {
       "command": "node",
-      "args": ["/path/to/mcp-pkg-local/dist/index.js"],
+      "args": ["/absolute/path/to/mcp-pkg-local/dist/index.js"],
       "env": {
         "DEBUG": "mcp-pkg-local:*"
       }
@@ -90,19 +79,94 @@ For local testing with Claude Code, use the built version:
 }
 ```
 
-### Cursor / VS Code
+#### Gemini CLI
 
-Add to your MCP settings:
+Create or edit `~/.config/gemini/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "pkg-local": {
-      "command": "mcp-pkg-local"
+      "command": "npx",
+      "args": ["@descoped/mcp-pkg-local"]
     }
   }
 }
 ```
+
+After adding, use `/mcp list` in Gemini CLI to verify the server is configured.
+
+#### Cursor
+
+Create `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "pkg-local": {
+      "command": "npx",
+      "args": ["-y", "@descoped/mcp-pkg-local"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+Open Cursor Settings → MCP to verify connection (green status).
+
+### VS Code Extensions
+
+#### Continue Extension
+
+Add to `.continue/config.json`:
+
+```json
+{
+  "models": [...],
+  "mcpServers": {
+    "pkg-local": {
+      "command": "npx",
+      "args": ["@descoped/mcp-pkg-local"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+#### Windsurf
+
+Create `.windsurf/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "pkg-local": {
+      "command": "npx",
+      "args": ["-y", "@descoped/mcp-pkg-local"]
+    }
+  }
+}
+```
+
+### Desktop Applications
+
+#### Claude Desktop
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "pkg-local": {
+      "command": "npx",
+      "args": ["-y", "@descoped/mcp-pkg-local"]
+    }
+  }
+}
+```
+
+After adding, restart Claude Desktop completely. You'll see the MCP indicator (🔌) in the conversation input box.
 
 ## Usage
 
