@@ -5,6 +5,7 @@
 [![MCP Tool](https://img.shields.io/badge/MCP-Tool-green.svg)](https://modelcontextprotocol.io)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7%2B-blue.svg)](https://www.typescriptlang.org)
+[![npm version](https://img.shields.io/npm/v/@descoped/mcp-pkg-local.svg)](https://www.npmjs.com/package/@descoped/mcp-pkg-local)
 
 An MCP (Model Context Protocol) server that enables LLMs to read and understand locally installed package source code, helping reduce API hallucinations by providing direct access to actual installed packages.
 
