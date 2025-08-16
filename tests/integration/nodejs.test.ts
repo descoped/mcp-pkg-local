@@ -133,8 +133,8 @@ describe('Node.js Environment Integration', () => {
         // Should have package.json as init content for Node packages
         expect(result.initContent).toBeTruthy();
         if (result.initContent) {
-          const parsed = JSON.parse(result.initContent) as { name: string };
-          expect(parsed.name).toBe(packageName);
+          // initContent is now markdown, not JSON
+          expect(result.initContent).toContain(`name: ${packageName}`);
         }
       }
     });

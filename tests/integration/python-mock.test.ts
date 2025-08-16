@@ -192,6 +192,9 @@ describe('Python Virtual Environment Integration (Mock)', () => {
               ...pkg,
               hasTypes: pkg.hasTypes ?? false,
               isDirectDependency: pkg.isDirectDependency ?? false,
+              packageManager: pkg.packageManager ?? 'pip',
+              category: pkg.category ?? undefined,
+              unifiedContent: undefined, // Don't compare content in cache test
             };
           }
           return normalized;
