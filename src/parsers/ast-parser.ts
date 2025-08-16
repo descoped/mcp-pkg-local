@@ -446,7 +446,7 @@ export class ASTParser {
     if (jsDocs.length === 0) return undefined;
     
     const description = jsDocs[0]?.getDescription().trim();
-    return description || undefined;
+    return description ?? undefined;
   }
 
   /**
@@ -462,7 +462,7 @@ export class ASTParser {
     const sourceText = sourceFile.getText();
     const moduleExportsFunctionMatch = /module\.exports\s*=\s*function\s*(\w*)\s*\(/.exec(sourceText);
     if (moduleExportsFunctionMatch) {
-      const functionName = moduleExportsFunctionMatch[1] || 'default';
+      const functionName = moduleExportsFunctionMatch[1] ?? 'default';
       
       // Try to extract parameters from the function signature
       const paramMatch = /module\.exports\s*=\s*function\s*\w*\s*\(([^)]*)\)/.exec(sourceText);
@@ -489,7 +489,7 @@ export class ASTParser {
    */
   private extractExports(_packageJson: Record<string, unknown>): { default?: string; named: string[] } {
     const named: string[] = [];
-    let defaultExport: string | undefined;
+    let defaultExport: string | undefined = undefined;
     
     // Get named exports from all source files
     for (const sourceFile of this.project.getSourceFiles()) {
@@ -520,9 +520,7 @@ export class ASTParser {
       // Check for module.exports = function/class/object
       const moduleExportsMatches = sourceText.match(/module\.exports\s*=\s*(\w+|function|class|\{)/g);
       if (moduleExportsMatches) {
-        if (!defaultExport) {
-          defaultExport = 'default'; // CommonJS main export
-        }
+        defaultExport ??= 'default'; // CommonJS main export
       }
       
       // Check for exports.name = ...

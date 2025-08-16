@@ -60,13 +60,13 @@ export class MarkdownGenerator {
     const lines: string[] = ['## 📦 Package Information'];
     lines.push(`name: ${metadata.name}`);
     lines.push(`version: ${metadata.version}`);
-    lines.push(`type: ${metadata.description || 'No description'}`);
+    lines.push(`type: ${metadata.description ?? 'No description'}`);
     
     if (metadata.mainEntry) {
       lines.push(`main: ${metadata.mainEntry}`);
     }
     
-    lines.push(`license: ${metadata.license || 'Not specified'}`);
+    lines.push(`license: ${metadata.license ?? 'Not specified'}`);
     lines.push(`package_manager: ${metadata.packageManager}`);
     
     // Type system info (if relevant)
@@ -182,7 +182,7 @@ export class MarkdownGenerator {
     
     // Constants (exported only)
     if (components.constants && components.constants.length > 0) {
-      const exportedConstants = components.constants.filter((c: any) => c.isExported);
+      const exportedConstants = components.constants.filter((c) => c.isExported);
       if (exportedConstants.length > 0) {
         lines.push(`### Constants`);
         for (const constant of exportedConstants) {
@@ -198,7 +198,7 @@ export class MarkdownGenerator {
   private static generateClassSection(cls: ComponentClass, num: number): string[] {
     const lines: string[] = [];
     lines.push(`### ${num}. ${cls.name}`);
-    lines.push(`purpose: ${cls.purpose || 'Class implementation'}`);
+    lines.push(`purpose: ${cls.purpose ?? 'Class implementation'}`);
     
     if (cls.extends) lines.push(`extends: ${cls.extends}`);
     if (cls.implements && cls.implements.length > 0) {
@@ -216,7 +216,7 @@ export class MarkdownGenerator {
       lines.push('methods:');
       cls.methods.forEach(m => {
         const params = m.parameters.map(p => p.name).join(', ');
-        const returnType = m.returns?.name || 'void';
+        const returnType = m.returns?.name ?? 'void';
         const modifiers = [];
         if (m.visibility !== 'public') modifiers.push(m.visibility);
         if (m.isStatic) modifiers.push('static');
@@ -245,7 +245,7 @@ export class MarkdownGenerator {
   private static generateFunctionSection(func: ComponentFunction, num: number): string[] {
     const lines: string[] = [];
     lines.push(`### ${num}. ${func.name}()`);
-    lines.push(`purpose: ${func.purpose || 'Function implementation'}`);
+    lines.push(`purpose: ${func.purpose ?? 'Function implementation'}`);
     
     if (func.parameters && func.parameters.length > 0) {
       const params = func.parameters.map(p => {
@@ -278,7 +278,7 @@ export class MarkdownGenerator {
   private static generateInterfaceSection(iface: ComponentInterface, num: number): string[] {
     const lines: string[] = [];
     lines.push(`### ${num}. ${iface.name} (interface)`);
-    lines.push(`purpose: ${iface.purpose || 'Interface definition'}`);
+    lines.push(`purpose: ${iface.purpose ?? 'Interface definition'}`);
     
     if (iface.extends && iface.extends.length > 0) {
       lines.push(`extends: ${iface.extends.join(', ')}`);
@@ -288,7 +288,7 @@ export class MarkdownGenerator {
       lines.push('methods:');
       iface.methods.forEach(m => {
         const params = m.parameters.map(p => p.name).join(', ');
-        const returnType = m.returns?.name || 'void';
+        const returnType = m.returns?.name ?? 'void';
         lines.push(`  - ${m.name}(${params}): ${returnType}`);
       });
     }
@@ -328,7 +328,7 @@ export class MarkdownGenerator {
       lines.push('methods:');
       struct.methods.forEach(m => {
         const params = m.parameters.map(p => p.name).join(', ');
-        const returnType = m.returns?.name || 'void';
+        const returnType = m.returns?.name ?? 'void';
         lines.push(`  - ${m.name}(${params}): ${returnType}`);
       });
     }
@@ -345,7 +345,7 @@ export class MarkdownGenerator {
       lines.push('methods:');
       trait.methods.forEach(m => {
         const params = m.parameters.map(p => p.name).join(', ');
-        const returnType = m.returns?.name || 'void';
+        const returnType = m.returns?.name ?? 'void';
         lines.push(`  - ${m.name}(${params}): ${returnType}`);
       });
     }
@@ -359,8 +359,12 @@ export class MarkdownGenerator {
     return lines;
   }
   
-  private static generatePatternsSection(patterns: any): string {
+  private static generatePatternsSection(patterns: UnifiedPackageContent['patterns']): string {
     const lines: string[] = ['## 🎯 Usage Patterns\n'];
+    
+    if (!patterns) {
+      return '';
+    }
     
     if (patterns.initialization) {
       lines.push(`### Initialization`);
@@ -368,19 +372,21 @@ export class MarkdownGenerator {
       lines.push('');
     }
     
-    for (const example of patterns.examples) {
-      lines.push(`### ${example.title}`);
-      if (example.description) {
-        lines.push(example.description);
+    if (patterns.examples) {
+      for (const example of patterns.examples) {
+        lines.push(`### ${example.title}`);
+        if (example.description) {
+          lines.push(example.description);
+        }
+        lines.push(`\`\`\`${example.language}`);
+        lines.push(example.code);
+        lines.push('```\n');
       }
-      lines.push(`\`\`\`${example.language}`);
-      lines.push(example.code);
-      lines.push('```\n');
     }
     
     if (patterns.commonUsage && patterns.commonUsage.length > 0) {
       lines.push('### Common Usage');
-      patterns.commonUsage.forEach((usage: string) => 
+      patterns.commonUsage.forEach((usage) => 
         lines.push(`- ${usage}`)
       );
       lines.push('');
@@ -389,7 +395,7 @@ export class MarkdownGenerator {
     return lines.join('\n');
   }
   
-  private static generateExportsSection(exports: any): string {
+  private static generateExportsSection(exports: UnifiedPackageContent['exports']): string {
     const lines: string[] = ['## 🔌 Exports'];
     
     if (exports.default) {
@@ -414,7 +420,7 @@ export class MarkdownGenerator {
     return lines.join('\n');
   }
   
-  private static generateDependenciesSection(dependencies: any): string {
+  private static generateDependenciesSection(dependencies: UnifiedPackageContent['dependencies']): string {
     const lines: string[] = ['## 🔗 Dependencies'];
     
     const runtimeDeps = Object.entries(dependencies.runtime);

@@ -32,11 +32,6 @@ export abstract class BaseAdapter {
   abstract get language(): string;
 
   /**
-   * Get supported file extensions for this language
-   */
-  abstract get supportedExtensions(): string[];
-
-  /**
    * Clean up any resources used by the adapter
    */
   abstract cleanup(): void;

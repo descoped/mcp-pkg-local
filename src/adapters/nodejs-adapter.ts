@@ -16,10 +16,6 @@ export class NodeJSAdapter extends BaseAdapter {
     return 'javascript';
   }
 
-  get supportedExtensions(): string[] {
-    return ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
-  }
-
   async extractContent(
     packagePath: string,
     packageMetadata: Record<string, unknown>
@@ -29,8 +25,7 @@ export class NodeJSAdapter extends BaseAdapter {
 
     try {
       // Use the AST parser to extract content
-      const content = await this.parser.parsePackage(packagePath, packageMetadata);
-      return content;
+      return await this.parser.parsePackage(packagePath, packageMetadata);
     } catch (error) {
       console.error(`[NodeJSAdapter] Failed to parse package at ${packagePath}:`, error);
       // Return minimal content on error

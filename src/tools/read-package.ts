@@ -153,13 +153,13 @@ export async function readPackageTool(
         // Parse the package using appropriate adapter
         try {
           // Get package metadata
-          let packageMetadata: Record<string, unknown> = {};
+          let packageMetadata: Record<string, unknown>;
           let languageHint: string | undefined;
           
           if (isNodePackage) {
             // Read package.json for metadata
             const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
-            packageMetadata = JSON.parse(packageJsonContent);
+            packageMetadata = JSON.parse(packageJsonContent) as Record<string, unknown>;
             languageHint = 'javascript';
           } else {
             // For Python packages, create basic metadata

@@ -13,10 +13,6 @@ export class PythonAdapter extends BaseAdapter {
     return 'python';
   }
 
-  get supportedExtensions(): string[] {
-    return ['.py', '.pyi', '.pyx', '.pyd'];
-  }
-
   async extractContent(
     packagePath: string,
     packageMetadata: Record<string, unknown>
@@ -112,7 +108,7 @@ export class PythonAdapter extends BaseAdapter {
       const content = await readFile(initPath, 'utf-8');
       
       // Basic regex to find __all__ exports
-      const allMatch = /__all__\s*=\s*\[(.*?)\]/s.exec(content);
+      const allMatch = /__all__\s*=\s*\[(.*?)]/s.exec(content);
       if (allMatch?.[1]) {
         const exportsList = allMatch[1];
         const names = exportsList.match(/['"](\w+)['"]/g);

@@ -9,8 +9,8 @@ import type { BaseAdapter } from '#adapters/base-adapter';
 import type { UnifiedPackageContent } from '#types/unified-schema';
 
 export class ContentProcessor {
-  private adapters: BaseAdapter[] = [];
-  private adapterCache = new Map<string, BaseAdapter>();
+  private readonly adapters: BaseAdapter[];
+  private readonly adapterCache = new Map<string, BaseAdapter>();
 
   constructor() {
     // Initialize available adapters
@@ -56,8 +56,7 @@ export class ContentProcessor {
     }
 
     try {
-      const content = await adapter.extractContent(packagePath, packageMetadata);
-      return content;
+      return await adapter.extractContent(packagePath, packageMetadata);
     } catch (error) {
       console.error(`[ContentProcessor] Failed to process package at ${packagePath}:`, error);
       return null;
@@ -72,19 +71,5 @@ export class ContentProcessor {
       adapter.cleanup();
     }
     this.adapterCache.clear();
-  }
-
-  /**
-   * Get the adapter for a specific language
-   */
-  getAdapter(language: string): BaseAdapter | undefined {
-    return this.adapters.find(adapter => adapter.language === language);
-  }
-
-  /**
-   * Check if a language is supported
-   */
-  isLanguageSupported(language: string): boolean {
-    return this.adapters.some(adapter => adapter.language === language);
   }
 }

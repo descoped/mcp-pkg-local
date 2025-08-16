@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readPackageTool } from '../../src/tools/read-package.js';
-import { scanPackagesTool } from '../../src/tools/scan-packages.js';
-import { join } from 'node:path';
+import { readPackageTool } from '#tools/read-package';
+import { scanPackagesTool } from '#tools/scan-packages';
 import { promises as fs } from 'node:fs';
 
 describe('Unified Schema Integration', () => {
@@ -51,9 +50,6 @@ describe('Unified Schema Integration', () => {
       
       expect(hasClasses || hasFunctions).toBe(true);
       expect(hasExports).toBe(true);
-      
-      console.log('Sample content (first 2000 chars):');
-      console.log(content.substring(0, 2000));
     }
   });
   

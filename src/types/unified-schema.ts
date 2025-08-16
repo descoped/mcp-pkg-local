@@ -206,11 +206,3 @@ export function hasComponents(content: UnifiedPackageContent): boolean {
     (c.structs?.length ?? 0) > 0
   );
 }
-
-export function isStronglyTyped(content: UnifiedPackageContent): boolean {
-  return content.metadata.typeSystem?.isStronglyTyped ?? false;
-}
-
-export function hasTypeDefinitions(content: UnifiedPackageContent): boolean {
-  return content.metadata.typeSystem?.hasTypeAnnotations ?? false;
-}

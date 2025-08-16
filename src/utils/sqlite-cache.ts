@@ -12,6 +12,7 @@ import type {
   EnvironmentRow,
   PackageRow,
 } from '#types';
+import type { UnifiedPackageContent } from '#types/unified-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -281,7 +282,9 @@ export class SQLiteCache {
     const packageMap: Record<string, PackageInfo> = {};
     for (const pkg of packages) {
       // Unpack unified content if present
-      const unifiedContent = pkg.unified_content ? unpack(pkg.unified_content) : undefined;
+      const unifiedContent = pkg.unified_content 
+        ? unpack(pkg.unified_content) as UnifiedPackageContent 
+        : undefined;
       
       const result: PackageInfo = {
         name: pkg.name,
