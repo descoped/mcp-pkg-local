@@ -1,0 +1,15 @@
+{
+  "package": "@babel/types",
+  "description": "AST types (functional package)",
+  "processingTime": 854,
+  "stats": {
+    "totalSize": 151489,
+    "classes": 0,
+    "functions": 958,
+    "interfaces": 0,
+    "enums": 0,
+    "methods": 0,
+    "exports": true
+  },
+  "timestamp": "2025-08-16T12:45:06.014Z"
+}

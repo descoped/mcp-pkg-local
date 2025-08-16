@@ -118,14 +118,14 @@ export class SQLiteCache {
         INSERT OR REPLACE INTO packages (
           environment_id, name, version, location, language, category,
           relevance_score, popularity_score, file_count, size_bytes,
-          main_file, has_types, is_direct_dependency, metadata
+          main_file, has_type_definitions, is_direct_dependency, unified_content
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `),
 
       updatePackage: this.db.prepare(`
         UPDATE packages 
         SET version = ?, location = ?, category = ?, 
-            relevance_score = ?, metadata = ?
+            relevance_score = ?, unified_content = ?
         WHERE environment_id = ? AND name = ?
       `),
 
@@ -227,7 +227,8 @@ export class SQLiteCache {
 
       // Insert packages
       for (const [name, pkg] of Object.entries(result.packages)) {
-        const metadataBlob = pack(pkg);
+        // Pack unified content separately
+        const unifiedContentBlob = pkg.unifiedContent ? pack(pkg.unifiedContent) : null;
 
         this.statements.insertPackage.run(
           environmentId,
@@ -241,9 +242,9 @@ export class SQLiteCache {
           pkg.fileCount ?? null,
           pkg.sizeBytes ?? null,
           pkg.mainFile ?? null,
-          pkg.hasTypes ? 1 : 0,
+          pkg.hasTypes ? 1 : 0,  // has_type_definitions
           pkg.isDirectDependency ? 1 : 0,
-          metadataBlob,
+          unifiedContentBlob,  // Store unified content
         );
       }
     });
@@ -279,13 +280,20 @@ export class SQLiteCache {
     // Build result
     const packageMap: Record<string, PackageInfo> = {};
     for (const pkg of packages) {
-      const metadata = unpack(pkg.metadata) as PackageInfo;
+      // Unpack unified content if present
+      const unifiedContent = pkg.unified_content ? unpack(pkg.unified_content) : undefined;
+      
       const result: PackageInfo = {
-        ...metadata,
+        name: pkg.name,
+        version: pkg.version,
+        location: pkg.location,
+        language: pkg.language as 'python' | 'javascript',
+        category: pkg.category as 'production' | 'development' | undefined,
         relevanceScore: pkg.relevance_score,
         popularityScore: pkg.popularity_score,
-        hasTypes: Boolean(pkg.has_types),
+        hasTypes: Boolean(pkg.has_type_definitions),
         isDirectDependency: Boolean(pkg.is_direct_dependency),
+        unifiedContent,
       };
 
       // Add optional properties only if they have values

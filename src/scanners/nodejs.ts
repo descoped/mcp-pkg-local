@@ -394,6 +394,9 @@ export class NodeJSScanner extends BaseScanner {
       // Find main file
       const mainFile = (await this.getPackageMainFile(packageName)) ?? undefined;
 
+      // NOTE: AST parsing is done on-demand in read-package, not during scan
+      // This keeps the scan fast and only processes packages when requested
+
       const result: PackageInfo = {
         name: packageName,
         version: parsed.version ?? 'unknown',

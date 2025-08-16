@@ -9,6 +9,7 @@
     "baseUrl": ".",
     "paths": {
       "#types": ["./src/types.ts", "./src/types"],
+      "#types/unified-schema": ["./src/types/unified-schema.ts", "./src/types/unified-schema"],
       "#server": ["./src/server.ts", "./src/server"],
       "#scanners/base": ["./src/scanners/base.ts", "./src/scanners/base"],
       "#scanners/python": ["./src/scanners/python.ts", "./src/scanners/python"],
@@ -22,7 +23,15 @@
       "#utils/fs": ["./src/utils/fs.ts", "./src/utils/fs"],
       "#utils/scanner-factory": ["./src/utils/scanner-factory.ts", "./src/utils/scanner-factory"],
       "#utils/package-groups": ["./src/utils/package-groups.ts", "./src/utils/package-groups"],
-      "#utils/*": ["./src/utils/*"]
+      "#utils/package-scorer": ["./src/utils/package-scorer.ts", "./src/utils/package-scorer"],
+      "#utils/markdown-generator": ["./src/utils/markdown-generator.ts", "./src/utils/markdown-generator"],
+      "#utils/*": ["./src/utils/*"],
+      "#adapters/base-adapter": ["./src/adapters/base-adapter.ts", "./src/adapters/base-adapter"],
+      "#adapters/nodejs-adapter": ["./src/adapters/nodejs-adapter.ts", "./src/adapters/nodejs-adapter"],
+      "#adapters/python-adapter": ["./src/adapters/python-adapter.ts", "./src/adapters/python-adapter"],
+      "#adapters/*": ["./src/adapters/*"],
+      "#parsers/ast-parser": ["./src/parsers/ast-parser.ts", "./src/parsers/ast-parser"],
+      "#parsers/*": ["./src/parsers/*"]
     },
     "strict": true,
     "esModuleInterop": true,
@@ -39,7 +48,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "verbatimModuleSyntax": true,

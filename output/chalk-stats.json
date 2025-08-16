@@ -1,0 +1,15 @@
+{
+  "package": "chalk",
+  "description": "Terminal colors (simple package)",
+  "processingTime": 469,
+  "stats": {
+    "totalSize": 893,
+    "classes": 1,
+    "functions": 0,
+    "interfaces": 0,
+    "enums": 0,
+    "methods": 0,
+    "exports": true
+  },
+  "timestamp": "2025-08-16T12:45:07.033Z"
+}

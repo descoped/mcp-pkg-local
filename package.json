@@ -16,17 +16,93 @@
       "development": "./src/types.ts",
       "default": "./dist/types.js"
     },
+    "#types/unified-schema": {
+      "development": "./src/types/unified-schema.ts",
+      "default": "./dist/types/unified-schema.js"
+    },
     "#scanners/*": {
       "development": "./src/scanners/*.ts",
       "default": "./dist/scanners/*.js"
+    },
+    "#scanners/base": {
+      "development": "./src/scanners/base.ts",
+      "default": "./dist/scanners/base.js"
+    },
+    "#scanners/nodejs": {
+      "development": "./src/scanners/nodejs.ts",
+      "default": "./dist/scanners/nodejs.js"
+    },
+    "#scanners/python": {
+      "development": "./src/scanners/python.ts",
+      "default": "./dist/scanners/python.js"
+    },
+    "#scanners/content-processor": {
+      "development": "./src/scanners/content-processor.ts",
+      "default": "./dist/scanners/content-processor.js"
     },
     "#tools/*": {
       "development": "./src/tools/*.ts",
       "default": "./dist/tools/*.js"
     },
+    "#tools/scan-packages": {
+      "development": "./src/tools/scan-packages.ts",
+      "default": "./dist/tools/scan-packages.js"
+    },
+    "#tools/read-package": {
+      "development": "./src/tools/read-package.ts",
+      "default": "./dist/tools/read-package.js"
+    },
     "#utils/*": {
       "development": "./src/utils/*.ts",
       "default": "./dist/utils/*.js"
+    },
+    "#utils/cache": {
+      "development": "./src/utils/cache.ts",
+      "default": "./dist/utils/cache.js"
+    },
+    "#utils/fs": {
+      "development": "./src/utils/fs.ts",
+      "default": "./dist/utils/fs.js"
+    },
+    "#utils/scanner-factory": {
+      "development": "./src/utils/scanner-factory.ts",
+      "default": "./dist/utils/scanner-factory.js"
+    },
+    "#utils/package-groups": {
+      "development": "./src/utils/package-groups.ts",
+      "default": "./dist/utils/package-groups.js"
+    },
+    "#utils/package-scorer": {
+      "development": "./src/utils/package-scorer.ts",
+      "default": "./dist/utils/package-scorer.js"
+    },
+    "#utils/markdown-generator": {
+      "development": "./src/utils/markdown-generator.ts",
+      "default": "./dist/utils/markdown-generator.js"
+    },
+    "#utils/sqlite-cache": {
+      "development": "./src/utils/sqlite-cache.ts",
+      "default": "./dist/utils/sqlite-cache.js"
+    },
+    "#adapters/*": {
+      "development": "./src/adapters/*.ts",
+      "default": "./dist/adapters/*.js"
+    },
+    "#adapters/base-adapter": {
+      "development": "./src/adapters/base-adapter.ts",
+      "default": "./dist/adapters/base-adapter.js"
+    },
+    "#adapters/nodejs-adapter": {
+      "development": "./src/adapters/nodejs-adapter.ts",
+      "default": "./dist/adapters/nodejs-adapter.js"
+    },
+    "#adapters/python-adapter": {
+      "development": "./src/adapters/python-adapter.ts",
+      "default": "./dist/adapters/python-adapter.js"
+    },
+    "#parsers/ast-parser": {
+      "development": "./src/parsers/ast-parser.ts",
+      "default": "./dist/parsers/ast-parser.js"
     }
   },
   "scripts": {
@@ -80,6 +156,7 @@
     "@modelcontextprotocol/sdk": "^1.17.3",
     "better-sqlite3": "^12.1.0",
     "msgpackr": "^1.11.5",
+    "ts-morph": "^26.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

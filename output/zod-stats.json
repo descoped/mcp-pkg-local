@@ -1,0 +1,15 @@
+{
+  "package": "zod",
+  "description": "Schema validation (TypeScript classes/interfaces)",
+  "processingTime": 1236,
+  "stats": {
+    "totalSize": 212043,
+    "classes": 7,
+    "functions": 354,
+    "interfaces": 205,
+    "enums": 4,
+    "methods": 206,
+    "exports": true
+  },
+  "timestamp": "2025-08-16T12:45:04.762Z"
+}

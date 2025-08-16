@@ -1,0 +1,15 @@
+{
+  "package": "minimist",
+  "description": "Argument parser (minimal package)",
+  "processingTime": 449,
+  "stats": {
+    "totalSize": 797,
+    "classes": 0,
+    "functions": 0,
+    "interfaces": 0,
+    "enums": 0,
+    "methods": 0,
+    "exports": false
+  },
+  "timestamp": "2025-08-16T12:45:07.917Z"
+}

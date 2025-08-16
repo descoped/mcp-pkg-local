@@ -1,0 +1,338 @@
+# vitest Overview
+
+## 📦 Package Information
+name: vitest
+version: 3.2.4
+type: Next generation testing framework powered by Vite
+main: ./dist/index.js
+license: MIT
+package_manager: npm
+type_system: dynamically typed
+type_annotations: available
+type_definitions: ./dist/index.d.ts
+
+## 🔧 Configuration
+build_system: npm
+
+commands:
+  - build: rimraf dist && rollup -c
+  - dev: NODE_OPTIONS="--max-old-space-size=8192" rollup -c --watch -m inline
+
+## 🏗️ Core Components
+
+### 1. ImportMeta (interface)
+purpose: Interface definition
+properties:
+  - url: string
+  - vitest: typeof import('vitest')
+
+## 🔌 Exports
+named_exports:
+  - collectTests
+  - processError
+  - startTests
+  - SpyModule
+  - LoupeOptions
+  - ParsedStack
+  - StringifyOptions
+  - format
+  - getSafeTimers
+  - inspect
+  - stringify
+  - TraceMap
+  - originalPositionFor
+  - loadDiffConfig
+  - loadSnapshotSerializers
+  - setupCommonEnv
+  - startCoverageInsideWorker
+  - stopCoverageInsideWorker
+  - takeCoverageInsideWorker
+  - ConfigEnv
+  - Plugin
+  - ViteUserConfig
+  - mergeConfig
+  - TestProjectInlineConfiguration
+  - WatcherTriggerPattern
+  - WorkspaceProjectConfiguration
+  - TestProjectConfiguration
+  - UserProjectConfigExport
+  - UserProjectConfigFn
+  - UserWorkspaceConfig
+  - configDefaults
+  - coverageConfigDefaults
+  - defaultBrowserPort
+  - defaultExclude
+  - defaultInclude
+  - defineConfig
+  - defineProject
+  - defineWorkspace
+  - extraInlineDeps
+  - UserConfig
+  - UserConfigExport
+  - UserConfigFn
+  - UserConfigFnObject
+  - UserConfigFnPromise
+  - BaseCoverageProvider
+  - EnvironmentReturn
+  - VmEnvironmentReturn
+  - Environment
+  - builtinEnvironments
+  - populateGlobal
+  - VitestExecutor
+  - AutomockedModule
+  - AutomockedModuleSerialized
+  - AutospiedModule
+  - AutospiedModuleSerialized
+  - ManualMockedModule
+  - ManualMockedModuleSerialized
+  - MockedModule
+  - MockedModuleSerialized
+  - MockerRegistry
+  - RedirectedModule
+  - RedirectedModuleSerialized
+  - ModuleMockFactory
+  - ModuleMockFactoryWithHelper
+  - ModuleMockOptions
+  - MockedModuleType
+  - mockObject
+  - GlobalConstructors
+  - MockObjectOptions
+  - BaseCoverageOptions
+  - BenchmarkUserOptions
+  - BrowserBuiltinProvider
+  - BrowserCommand
+  - BrowserCommandContext
+  - BrowserConfigOptions
+  - BrowserInstanceOption
+  - BrowserModuleMocker
+  - BrowserOrchestrator
+  - BrowserProvider
+  - BrowserProviderInitializationOptions
+  - BrowserProviderModule
+  - BrowserProviderOptions
+  - BrowserScript
+  - BrowserServerState
+  - BrowserServerStateSession
+  - BuiltinEnvironment
+  - CDPSession
+  - CSSModuleScopeStrategy
+  - CoverageIstanbulOptions
+  - CoverageOptions
+  - CoverageProvider
+  - CoverageProviderModule
+  - CoverageReporter
+  - CoverageV8Options
+  - CustomProviderOptions
+  - DepsOptimizationOptions
+  - HTMLOptions
+  - InlineConfig
+  - JUnitOptions
+  - JsonOptions
+  - OnServerRestartHandler
+  - OnTestsRerunHandler
+  - ParentProjectBrowser
+  - Pool
+  - PoolOptions
+  - ProcessPool
+  - ProjectBrowser
+  - ProjectConfig
+  - ReportContext
+  - ReportedHookContext
+  - Reporter
+  - ResolveSnapshotPathHandler
+  - ResolveSnapshotPathHandlerContext
+  - ResolvedBrowserOptions
+  - ResolvedCoverageOptions
+  - ResolvedProjectConfig
+  - SerializedTestProject
+  - TaskOptions
+  - TestCase
+  - TestCollection
+  - TestDiagnostic
+  - TestModuleState
+  - TestResult
+  - TestResultFailed
+  - TestResultPassed
+  - TestResultSkipped
+  - TestRunEndReason
+  - TestRunResult
+  - TestSequencerConstructor
+  - TestState
+  - TestSuite
+  - TestSuiteState
+  - TransformModePatterns
+  - TypecheckConfig
+  - VitestEnvironment
+  - VitestPackageInstaller
+  - WorkspaceSpec
+  - getFilePoolName
+  - Vite
+  - esbuildVersion
+  - isCSSRequest
+  - isFileServingAllowed
+  - parseAst
+  - parseAstAsync
+  - rollupVersion
+  - viteVersion
+  - TestExecutionType
+  - VitestPluginContext
+  - WorkerContext
+  - TypeCheckCollectLineNumbers
+  - TypeCheckCollectLines
+  - TypeCheckContext
+  - TypeCheckErrorInfo
+  - TypeCheckRawErrorsMap
+  - TypeCheckRootAndTarget
+  - RunnerTask
+  - RunnerTaskResult
+  - RunnerTaskResultPack
+  - RunnerTestCase
+  - RunnerTestFile
+  - RunnerTestSuite
+  - SequenceHooks
+  - SequenceSetupFiles
+  - EnvironmentOptions
+  - HappyDOMOptions
+  - JSDOMOptions
+  - SerializedError
+  - RuntimeConfig
+  - generateFileHash
+  - ApiConfig
+  - BaseSequencer
+  - GitNotFoundError
+  - ModuleDiagnostic
+  - ResolvedConfig
+  - TestFile
+  - TestModule
+  - TestProject
+  - TestSequencer
+  - TestSpecification
+  - TestsNotFoundError
+  - Vitest
+  - VitestOptions
+  - VitestPlugin
+  - VitestRunMode
+  - WorkspaceProject
+  - createDebugger
+  - createMethodsRPC
+  - createServer
+  - createViteLogger
+  - createViteServer
+  - createVitest
+  - distDir
+  - isValidApiRequest
+  - parseCLI
+  - registerConsoleShortcuts
+  - resolveApiServerConfig
+  - resolveConfig
+  - resolveFsAllow
+  - rolldownVersion
+  - rootDir
+  - startVitest
+  - version
+  - CliParseOptions
+  - FileDiagnostic
+  - GlobalSetupContext
+  - jsdomTypes
+  - happyDomTypes
+  - BaseReporter
+  - BasicReporter
+  - BenchmarkBuiltinReporters
+  - BenchmarkReporter
+  - BenchmarkReportsMap
+  - BuiltinReporterOptions
+  - BuiltinReporters
+  - DefaultReporter
+  - DotReporter
+  - GithubActionsReporter
+  - HangingProcessReporter
+  - JUnitReporter
+  - JsonAssertionResult
+  - JsonReporter
+  - JsonTestResult
+  - JsonTestResults
+  - ReportersMap
+  - TapFlatReporter
+  - TapReporter
+  - VerboseBenchmarkReporter
+  - VerboseReporter
+  - VitestRunner
+  - NodeBenchmarkRunner
+  - VitestTestRunner
+  - SnapshotEnvironment
+  - VitestSnapshotEnvironment
+  - getBenchFn
+  - getBenchOptions
+  - VitestRunnerConfig
+  - createTaskCollector
+  - getCurrentSuite
+  - getCurrentTest
+  - getFn
+  - getHooks
+  - setFn
+  - setHooks
+  - createChainable
+
+## 🔗 Dependencies
+  - @types/chai: ^5.2.2
+  - chai: ^5.2.0
+  - debug: ^4.4.1
+  - expect-type: ^1.2.1
+  - magic-string: ^0.30.17
+  - pathe: ^2.0.3
+  - picomatch: ^4.0.2
+  - std-env: ^3.9.0
+  - tinybench: ^2.9.0
+  - tinyexec: ^0.3.2
+  - tinyglobby: ^0.2.14
+  - tinypool: ^1.1.1
+  - tinyrainbow: ^2.0.0
+  - vite: ^5.0.0 || ^6.0.0 || ^7.0.0-0
+  - why-is-node-running: ^2.3.0
+  - @vitest/expect: 3.2.4
+  - @vitest/mocker: 3.2.4
+  - @vitest/snapshot: 3.2.4
+  - @vitest/runner: 3.2.4
+  - @vitest/pretty-format: ^3.2.4
+  - @vitest/spy: 3.2.4
+  - vite-node: 3.2.4
+  - @vitest/utils: 3.2.4
+
+### Development Dependencies
+  - @ampproject/remapping: ^2.3.0
+  - @antfu/install-pkg: ^1.1.0
+  - @edge-runtime/vm: ^5.0.0
+  - @sinonjs/fake-timers: 14.0.0
+  - @types/debug: ^4.1.12
+  - @types/estree: ^1.0.8
+  - @types/istanbul-lib-coverage: ^2.0.6
+  - @types/istanbul-reports: ^3.0.4
+  - @types/jsdom: ^21.1.7
+  - @types/mime: ^4.0.0
+  - @types/node: ^22.15.32
+  - @types/picomatch: ^4.0.0
+  - @types/prompts: ^2.4.9
+  - @types/sinonjs__fake-timers: ^8.1.5
+  - acorn-walk: ^8.3.4
+  - birpc: 2.4.0
+  - cac: ^6.7.14
+  - chai-subset: ^1.6.0
+  - find-up: ^6.3.0
+  - flatted: ^3.3.3
+  - happy-dom: ^17.6.3
+  - jsdom: ^26.1.0
+  - local-pkg: ^1.1.1
+  - mime: ^4.0.7
+  - pretty-format: ^29.7.0
+  - prompts: ^2.4.2
+  - strip-literal: ^3.0.0
+  - ws: ^8.18.2
+
+### Peer Dependencies
+  - @edge-runtime/vm: *
+  - @types/debug: ^4.1.12
+  - @types/node: ^18.0.0 || ^20.0.0 || >=22.0.0
+  - happy-dom: *
+  - jsdom: *
+  - @vitest/browser: 3.2.4
+  - @vitest/ui: 3.2.4

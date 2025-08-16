@@ -1,0 +1,15 @@
+{
+  "package": "typescript",
+  "description": "TypeScript compiler (large complex package)",
+  "processingTime": 3104,
+  "stats": {
+    "totalSize": 335576,
+    "classes": 3,
+    "functions": 0,
+    "interfaces": 975,
+    "enums": 0,
+    "methods": 2329,
+    "exports": true
+  },
+  "timestamp": "2025-08-16T12:45:03.106Z"
+}

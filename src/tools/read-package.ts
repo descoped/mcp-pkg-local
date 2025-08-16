@@ -5,6 +5,9 @@ import type { ReadPackageParams, ReadPackageResult } from '#types';
 import { ReadPackageParamsSchema, PackageNotFoundError, FileNotFoundError } from '#types';
 import { join } from 'node:path';
 import { promises as fs } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { MarkdownGenerator } from '#utils/markdown-generator';
+import { ContentProcessor } from '#scanners/content-processor';
 
 export async function readPackageTool(
   params: { packageName: string } & Partial<ReadPackageParams>,
@@ -134,29 +137,63 @@ export async function readPackageTool(
         truncated = false; // Not truncated in lazy mode
       }
 
-      // Try to read main/init file content
+      // Get unified content from cache or parse on-demand
       let initContent: string | undefined;
-
-      if (isNodePackage) {
-        // For Node.js packages, try to read package.json as the main info
-        try {
-          const stats = await fs.stat(packageJsonPath);
-          if (stats.isFile() && stats.size < 50000) {
-            initContent = await readFileWithSizeCheck(packageJsonPath);
-          }
-        } catch {
-          // package.json might be too large
-        }
+      
+      // Check if we have unified content in the cache
+      if (cached?.packages[packageName]?.unifiedContent) {
+        // Use cached unified content
+        const unifiedContent = cached.packages[packageName].unifiedContent;
+        initContent = MarkdownGenerator.generate(unifiedContent);
+        console.error(`[READ] Using cached unified content for ${packageName}`);
       } else {
-        // For Python packages, try to read __init__.py
-        const initPath = join(packageLocation, '__init__.py');
+        // Parse the package on-demand
+        console.error(`[READ] Parsing ${packageName} on-demand...`);
+        
+        // Parse the package using appropriate adapter
         try {
-          const stats = await fs.stat(initPath);
-          if (stats.isFile() && stats.size < 50000) {
-            initContent = await readFileWithSizeCheck(initPath);
+          // Get package metadata
+          let packageMetadata: Record<string, unknown> = {};
+          let languageHint: string | undefined;
+          
+          if (isNodePackage) {
+            // Read package.json for metadata
+            const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
+            packageMetadata = JSON.parse(packageJsonContent);
+            languageHint = 'javascript';
+          } else {
+            // For Python packages, create basic metadata
+            packageMetadata = {
+              name: packageName,
+              version: cached?.packages[packageName]?.version ?? 'unknown',
+            };
+            languageHint = 'python';
           }
-        } catch {
-          // __init__.py might not exist or be too large
+          
+          // Use ContentProcessor to extract content with appropriate adapter
+          const processor = new ContentProcessor();
+          const unifiedContent = await processor.processPackage(
+            packageLocation,
+            packageMetadata,
+            languageHint
+          );
+          
+          if (unifiedContent) {
+            // Generate markdown from unified content
+            initContent = MarkdownGenerator.generate(unifiedContent);
+            
+            // Update cache with the parsed content
+            if (cached?.packages[packageName]) {
+              cached.packages[packageName].unifiedContent = unifiedContent;
+              cache.save(cached);
+            }
+          }
+          
+          // Clean up the processor
+          processor.cleanup();
+        } catch (error) {
+          console.error(`[READ] Failed to parse ${packageName}:`, error);
+          initContent = `# ${packageName}\n\nVersion: ${packageVersion ?? 'unknown'}\n\nPackage information available but detailed content extraction failed.`;
         }
       }
 

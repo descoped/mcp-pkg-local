@@ -5,6 +5,7 @@ import { join, basename } from 'node:path';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PackageScorer } from '#utils/package-scorer';
+import type { UnifiedPackageContent } from '#types/unified-schema';
 
 const execAsync = promisify(exec);
 
@@ -386,13 +387,24 @@ export class PythonScanner extends BaseScanner {
         .replace(this.basePath + '/', '')
         .replace(this.basePath + '\\', '');
 
-      return {
+      // TODO: Implement Python AST parsing similar to JavaScript
+      // For now, Python packages won't have detailed content extraction
+      let unifiedContent: UnifiedPackageContent | undefined;
+
+      const result: PackageInfo = {
         name,
         version,
         location: relativeLoc,
         language: 'python' as const,
         packageManager: 'pip',
       };
+      
+      // Add unifiedContent only if it exists
+      if (unifiedContent) {
+        result.unifiedContent = unifiedContent;
+      }
+      
+      return result;
     } catch (error) {
       this.log(`Failed to extract info from ${distInfoPath}:`, error);
       return null;

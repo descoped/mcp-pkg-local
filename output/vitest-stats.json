@@ -1,0 +1,15 @@
+{
+  "package": "vitest",
+  "description": "Testing framework (should have classes/functions)",
+  "processingTime": 854,
+  "stats": {
+    "totalSize": 7247,
+    "classes": 0,
+    "functions": 0,
+    "interfaces": 1,
+    "enums": 0,
+    "methods": 0,
+    "exports": true
+  },
+  "timestamp": "2025-08-16T12:44:59.577Z"
+}

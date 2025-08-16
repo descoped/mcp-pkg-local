@@ -58,17 +58,24 @@ async function fixImports(dir: string): Promise<void> {
       
       // Replace # imports with relative imports
       content = content.replace(/#server/g, './server.js');
-      content = content.replace(/#types/g, './types.js');
+      content = content.replace(/#types\/([^'"\s;]+)/g, './types/$1.js');
+      content = content.replace(/#types(?!\/)/g, './types.js');
       content = content.replace(/#scanners\/([^'"\s;]+)/g, './scanners/$1.js');
       content = content.replace(/#tools\/([^'"\s;]+)/g, './tools/$1.js');
       content = content.replace(/#utils\/([^'"\s;]+)/g, './utils/$1.js');
+      content = content.replace(/#adapters\/([^'"\s;]+)/g, './adapters/$1.js');
+      content = content.replace(/#parsers\/([^'"\s;]+)/g, './parsers/$1.js');
       
       // Fix nested imports
-      if (fullPath.includes('/scanners/') || fullPath.includes('/tools/') || fullPath.includes('/utils/')) {
+      if (fullPath.includes('/scanners/') || fullPath.includes('/tools/') || fullPath.includes('/utils/') || 
+          fullPath.includes('/adapters/') || fullPath.includes('/parsers/')) {
         content = content.replace(/\.\/types\.js/g, '../types.js');
+        content = content.replace(/\.\/types\//g, '../types/');
         content = content.replace(/\.\/scanners\//g, '../scanners/');
         content = content.replace(/\.\/tools\//g, '../tools/');
         content = content.replace(/\.\/utils\//g, '../utils/');
+        content = content.replace(/\.\/adapters\//g, '../adapters/');
+        content = content.replace(/\.\/parsers\//g, '../parsers/');
       }
       
       await fs.writeFile(fullPath, content, 'utf-8');

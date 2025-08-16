@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { UnifiedPackageContent } from '#types/unified-schema';
+
 // Package metadata
 export type PackageInfo = {
   name: string;
@@ -15,6 +17,7 @@ export type PackageInfo = {
   mainFile?: string;
   hasTypes?: boolean;
   isDirectDependency?: boolean;
+  unifiedContent?: UnifiedPackageContent;  // Extracted content from source files
 };
 
 // Environment information
@@ -267,9 +270,9 @@ export interface PackageRow {
   file_count: number | null;
   size_bytes: number | null;
   main_file: string | null;
-  has_types: number;
+  has_type_definitions: number;
   is_direct_dependency: number;
-  metadata: Buffer;
+  unified_content: Buffer;
   created_at: string;
   updated_at: string;
   similarity_score?: number;

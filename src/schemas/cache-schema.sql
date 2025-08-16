@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS environments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   partition_key TEXT UNIQUE NOT NULL,         -- e.g., "nodejs-/path/to/project"
   project_path TEXT NOT NULL,                 -- absolute path to project root
-  language TEXT NOT NULL CHECK (language IN ('python', 'javascript')),
+  language TEXT NOT NULL CHECK (language IN (
+    'python', 'javascript', 'typescript',
+    'java', 'rust', 'go', 'c', 'cpp'
+  )),
   package_manager TEXT,                       -- npm, poetry, pip, etc.
   last_scan DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   scan_duration_ms INTEGER,                   -- milliseconds taken for last scan
@@ -33,7 +36,7 @@ CREATE TABLE IF NOT EXISTS environments (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Package information table
+-- Enhanced package information table for multi-language support
 -- Stores individual package metadata for each environment
 CREATE TABLE IF NOT EXISTS packages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,18 +44,52 @@ CREATE TABLE IF NOT EXISTS packages (
   name TEXT NOT NULL,                         -- package name (e.g., "typescript", "@types/node")
   version TEXT NOT NULL,                      -- semantic version string
   location TEXT NOT NULL,                     -- relative path from project root
-  language TEXT NOT NULL CHECK (language IN ('python', 'javascript')),
-  category TEXT CHECK (category IN ('production', 'development')), -- NULL for transitive
-  relevance_score INTEGER DEFAULT 0,         -- 0-1000 score for smart prioritization
-  popularity_score INTEGER DEFAULT 0,        -- 0-100 score for general popularity
+  
+  -- Enhanced language support
+  language TEXT NOT NULL CHECK (language IN (
+    'python', 'javascript', 'typescript', 
+    'java', 'rust', 'go', 'c', 'cpp'
+  )),
+  
+  -- Package manager flexibility
+  package_manager TEXT CHECK (package_manager IN (
+    'npm', 'yarn', 'pnpm', 'bun',           -- JS ecosystem
+    'pip', 'poetry', 'uv', 'conda',         -- Python ecosystem
+    'maven', 'gradle',                      -- Java ecosystem
+    'cargo',                                 -- Rust ecosystem
+    'go',                                    -- Go modules
+    'conan', 'vcpkg'                        -- C/C++ ecosystem
+  )),
+  
+  -- Category can vary by ecosystem (no constraint)
+  category TEXT,                              -- production, development, test, build, etc.
+  
+  -- Type system information
+  is_strongly_typed BOOLEAN DEFAULT 0,        -- true for Java, Rust, Go, C++
+  has_type_definitions BOOLEAN DEFAULT 0,     -- has .d.ts, .pyi, etc.
+  type_definition_path TEXT,                  -- path to type definitions
+  
+  -- Scoring remains consistent
+  relevance_score INTEGER DEFAULT 0,          -- 0-1000 score for smart prioritization
+  popularity_score INTEGER DEFAULT 0,         -- 0-100 score for general popularity
+  
+  -- Metrics
   file_count INTEGER,                         -- number of files in package
   size_bytes INTEGER,                         -- total package size
   main_file TEXT,                             -- entry point file path
-  has_types BOOLEAN DEFAULT 0,                -- has TypeScript definitions
+  
+  -- Dependency information
   is_direct_dependency BOOLEAN DEFAULT 0,     -- declared in project config
-  metadata BLOB,                              -- MessagePack encoded PackageInfo
+  dependency_depth INTEGER DEFAULT 0,         -- 0=direct, 1+=transitive
+  
+  -- Serialized unified content (MessagePack)
+  unified_content BLOB,                       -- Full UnifiedPackageContent
+  content_hash TEXT,                          -- SHA-256 of content for change detection
+  
+  -- Timestamps
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  content_generated_at DATETIME,              -- When markdown was generated
   
   FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE CASCADE,
   UNIQUE(environment_id, name)
