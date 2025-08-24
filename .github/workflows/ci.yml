@@ -9,13 +9,176 @@ on:
       - '**'
     paths-ignore:
       - '**.md'
+    # Skip CI when commit message contains [skip ci]
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Specific test pattern to run (e.g., "should install packages")'
+        required: false
+        type: string
+        default: ''
+      run_bottles_tests:
+        description: 'Run Bottles Tests'
+        required: false
+        default: true
+        type: boolean
+      run_timeout_tests:
+        description: 'Run Timeout System Tests'
+        required: false
+        default: true
+        type: boolean
+      run_integration_tests:
+        description: 'Run Integration Tests'
+        required: false
+        default: true
+        type: boolean
+      run_bottles_integration_tests:
+        description: 'Run Bottles Integration Tests'
+        required: false
+        default: true
+        type: boolean
+      run_performance_tests:
+        description: 'Run Performance Tests'
+        required: false
+        default: true
+        type: boolean
+      debug_mode:
+        description: 'Enable debug output'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  ci:
+  # Stage 1: Quick checks and unit tests (fail fast)
+  quick-checks:
     runs-on: ubuntu-latest
+    name: "Quick Checks & Unit Tests"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify build excludes
+        run: |
+          # Ensure CLAUDE.md and ai_docs are not in dist
+          if [ -f "dist/CLAUDE.md" ] || [ -d "dist/ai_docs" ]; then
+            echo "ERROR: CLAUDE.md or ai_docs found in dist/"
+            exit 1
+          fi
+          echo "✓ Build correctly excludes internal files"
+
+      - name: Unit Tests (Stage 1)
+        run: npm run test:ci:stage1
+
+  # Stage 2: Timeout System Tests (standalone capability)
+  timeout-tests:
+    runs-on: ubuntu-latest
+    name: "Timeout System Tests"
+    needs: quick-checks
+    if: github.event_name != 'workflow_dispatch' || inputs.run_timeout_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Timeout System Tests (Stage 2)
+        run: npm run test:ci:stage2
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 3: Bottles unit tests (excluding timeout tests)
+  bottles-tests:
+    runs-on: ubuntu-latest
+    name: "Bottles Tests"
+    needs: quick-checks
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
+        run: |
+          # Install UV using the standalone installer
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Add to PATH for current session
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          # Verify UV is accessible
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Bottles Tests (Stage 3)
+        run: npm run test:ci:stage3
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 4: Integration tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: "Integration Tests"
+    needs: quick-checks
+    if: github.event_name != 'workflow_dispatch' || inputs.run_integration_tests
 
     steps:
       - name: Checkout code
@@ -46,23 +209,365 @@ jobs:
           source .venv/bin/activate
           pip install requests flask pydantic sqlalchemy
 
-      - name: Lint
-        run: npm run lint
+      - name: Integration Tests (Stage 4)
+        run: npm run test:ci:stage4
 
-      - name: Type check
-        run: npm run typecheck
+  # Stage 5: Integration Setup Tests (Fast baseline validation)
+  integration-setup-tests:
+    runs-on: ubuntu-latest
+    name: "Integration Setup Tests"
+    needs: quick-checks
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
 
-      - name: Build
-        run: npm run build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Test
-        run: npm test
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
 
-      - name: Verify build excludes
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
         run: |
-          # Ensure CLAUDE.md and ai_docs are not in dist
-          if [ -f "dist/CLAUDE.md" ] || [ -d "dist/ai_docs" ]; then
-            echo "ERROR: CLAUDE.md or ai_docs found in dist/"
-            exit 1
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
           fi
-          echo "✓ Build correctly excludes internal files"
+
+      - name: Integration Setup Tests (Stage 5)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/common/integration-setup.test.ts
+          else
+            npm run test:ci:stage5
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 6: CI Environment Tests
+  ci-environment-tests:
+    runs-on: ubuntu-latest
+    name: "CI Environment Tests"
+    needs: integration-setup-tests
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: CI Environment Tests (Stage 6)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/common/ci-environment.test.ts
+          else
+            npm run test:ci:stage6
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 7: Pip Integration Tests  
+  pip-integration-tests:
+    runs-on: ubuntu-latest
+    name: "Pip Integration Tests"
+    needs: integration-setup-tests
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Create test Python environment
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install requests flask pydantic sqlalchemy
+
+      - name: Pip Integration Tests (Stage 7)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/pip/pip-bottle.test.ts
+          else
+            npm run test:ci:stage7
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 8: UV Integration Tests
+  uv-integration-tests:
+    runs-on: ubuntu-latest
+    name: "UV Integration Tests"
+    needs: integration-setup-tests
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: UV Integration Tests (Stage 8)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/uv/uv-bottle.test.ts
+          else
+            npm run test:ci:stage8
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 9: Cross-Adapter Compatibility Tests
+  cross-adapter-tests:
+    runs-on: ubuntu-latest
+    name: "Cross-Adapter Tests"
+    needs: integration-setup-tests
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Create test Python environment
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install requests flask pydantic sqlalchemy
+
+      - name: Cross-Adapter Tests (Stage 9)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/common/cross-adapter-compatibility.test.ts
+          else
+            npm run test:ci:stage9
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 10: Volume Controller Cache Tests
+  volume-cache-tests:
+    runs-on: ubuntu-latest
+    name: "Volume Cache Tests"
+    needs: integration-setup-tests
+    if: github.event_name != 'workflow_dispatch' || inputs.run_bottles_integration_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv (Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          which uv && uv --version
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Volume Cache Tests (Stage 10)
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npm run test:ci:run-pattern "${{ inputs.test_filter }}" tests/bottles/integration/common/volume-controller-cache.test.ts
+          else
+            npm run test:ci:stage10
+          fi
+        env:
+          DEBUG_TIMEOUT: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_SHELL_RPC: ${{ inputs.debug_mode && 'true' || '' }}
+          DEBUG_BOTTLES: ${{ inputs.debug_mode && 'true' || '' }}
+
+  # Stage 11: Performance tests (optional, can be skipped)
+  performance-tests:
+    runs-on: ubuntu-latest
+    name: "Performance Tests"
+    needs: quick-checks
+    if: github.event_name != 'workflow_dispatch' || inputs.run_performance_tests
+    continue-on-error: true  # Don't fail the build if performance tests fail
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Performance Tests (Stage 11)
+        run: npm run test:ci:stage11
+
+  # Final status check
+  ci-status:
+    runs-on: ubuntu-latest
+    name: "CI Status"
+    needs: [
+      quick-checks, 
+      bottles-tests, 
+      timeout-tests, 
+      integration-tests, 
+      integration-setup-tests,
+      ci-environment-tests,
+      pip-integration-tests,
+      uv-integration-tests,
+      cross-adapter-tests,
+      volume-cache-tests
+    ]
+    if: always()
+
+    steps:
+      - name: Check CI Status
+        run: |
+          if [ "${{ needs.quick-checks.result }}" != "success" ] || \
+             [ "${{ needs.bottles-tests.result }}" != "success" ] || \
+             [ "${{ needs.timeout-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-setup-tests.result }}" != "success" ] || \
+             [ "${{ needs.ci-environment-tests.result }}" != "success" ] || \
+             [ "${{ needs.pip-integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.uv-integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.cross-adapter-tests.result }}" != "success" ] || \
+             [ "${{ needs.volume-cache-tests.result }}" != "success" ]; then
+            echo "❌ CI failed in one or more required stages"
+            exit 1
+          else
+            echo "✅ All required CI stages passed"
+          fi

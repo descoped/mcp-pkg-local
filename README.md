@@ -6,6 +6,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7%2B-blue.svg)](https://www.typescriptlang.org)
 [![npm version](https://img.shields.io/npm/v/@descoped/mcp-pkg-local.svg)](https://www.npmjs.com/package/@descoped/mcp-pkg-local)
+[![Test Coverage](https://img.shields.io/badge/Tests-300%2B%20passing-brightgreen.svg)](https://github.com/descoped/mcp-pkg-local/actions)
 
 An MCP (Model Context Protocol) server that enables LLMs to read and understand locally installed package source code, helping reduce API hallucinations by providing direct access to actual installed packages.
 
@@ -14,8 +15,9 @@ An MCP (Model Context Protocol) server that enables LLMs to read and understand 
 ### Core Capabilities
 - 🔍 **Auto-Detection**: Automatically detects Python or Node.js projects
 - 📖 **Source Code Access**: Direct reading of actual installed package source code
-- ⚡ **High Performance**: SQLite cache with 40x faster validity checks (v0.1.1)
+- ⚡ **High Performance**: SQLite cache with 40x faster validity checks
 - 🎯 **Zero Configuration**: Works immediately with standard project structures
+- 🚀 **Production Ready**: 300+ tests, 14 CI stages, comprehensive error handling
 
 ### Advanced Filtering
 - 📊 **Summary Mode**: Get package counts with 99% token reduction
@@ -30,9 +32,10 @@ An MCP (Model Context Protocol) server that enables LLMs to read and understand 
   - Package managers: npm, pnpm, yarn, bun
   - Production vs development classification
   - Scoped packages (@org/package)
-- 🐍 **Python**: Basic support for virtual environments
-  - Package managers: pip, poetry, uv, pipenv (detection only)
-  - Virtual environments: venv, .venv
+- 🐍 **Python**: Full support for virtual environments
+  - Package managers: pip, uv (full support), poetry, pipenv (detection)
+  - Virtual environments: venv, .venv, conda
+  - Bottles architecture for isolated package operations
   - Note: Dependency categorization pending
 
 ### Performance Optimizations
@@ -45,9 +48,10 @@ An MCP (Model Context Protocol) server that enables LLMs to read and understand 
 ### Developer Experience
 - 🛠️ **TypeScript 5.9+**: Strict mode with full type safety
 - 📦 **ES Modules**: Modern JavaScript with import maps
-- 🧪 **Comprehensive Testing**: 59 tests covering all scenarios
+- 🧪 **Comprehensive Testing**: 300+ tests covering all scenarios
 - 🔒 **Security**: Path sanitization, file size limits, read-only access
 - 🚀 **MCP SDK**: Latest Model Context Protocol implementation
+- ⚙️ **CI/CD**: 14-stage pipeline with 4-minute total runtime
 
 ## Why mcp-pkg-local?
 
@@ -281,19 +285,20 @@ read-package typescript --includeTree --pattern "*.d.ts"
 read-package express --includeTree --pattern "lib/**"
 ```
 
-## Performance Features (v0.1.1)
+## Performance Features (v0.2.0)
 
 The tool has been optimized for LLM token consumption:
 
 ### Token Usage Comparison
 
-| Operation | v0.1.0 | v0.1.1 | Reduction |
+| Operation | v0.1.0 | v0.2.0 | Reduction |
 |-----------|--------|--------|-----------|
 | Full scan (all packages) | 20,000 | 2,000 | 90% |
 | Summary scan | N/A | 200 | 99% |
 | Filtered scan (e.g., testing tools) | 20,000 | 500 | 97.5% |
 | Read package (default) | 5,000 | 300 | 94% |
 | Read package with tree | 5,000 | 1,000 | 80% |
+| Large TypeScript files (AST) | 100,000 | 300 | 99.7% |
 
 ### Key Optimizations
 
@@ -302,6 +307,8 @@ The tool has been optimized for LLM token consumption:
 3. **Relative Paths**: Uses relative paths to save ~30% on path strings
 4. **Smart Filtering**: Multiple ways to get exactly what you need
 5. **Summary Mode**: Get counts without package details
+6. **AST Extraction**: TypeScript/JavaScript files parsed to 99.7% smaller output
+7. **Simplified API**: Only 3 total parameters across both tools (v0.2.0)
 
 ## How It Works
 
@@ -311,6 +318,31 @@ The tool has been optimized for LLM token consumption:
    - Node.js: Scans `node_modules` including scoped packages
 3. **Smart Caching**: SQLite database (`.pkg-local-cache/cache.db`) for high-performance lookups
 4. **Source Reading**: Provides file trees and actual source code to LLMs
+
+## Bottles Architecture
+
+The project includes a "Bottles" architecture for isolated package management operations:
+
+### Shell-RPC Engine (BRPC-001)
+- Persistent shell process management for stateful command execution
+- Activity-based timeout system that resets on stdout progress
+- Cross-platform support (Windows PowerShell, Linux bash, macOS bash)
+- Command queueing with automatic cleanup on timeout
+- Virtual environment activation support
+
+### Volume Controller (BVOL-001)
+- Cache management for 12+ package managers (npm, pip, poetry, maven, etc.)
+- Cross-platform cache path detection and mounting
+- 10x CI/CD performance improvement through cache persistence
+- Environment variable injection for consistent package operations
+- Proper error handling with actionable error messages
+
+### Package Manager Adapters
+- Unified interface for pip and uv (Python package managers)
+- Dynamic tool detection replaces hardcoded paths
+- Configurable timeouts with activity-based reset behavior
+- Support for requirements.txt, pyproject.toml, and lock files
+- Clean, isolated environments preventing system pollution
 
 ## Development
 
@@ -361,7 +393,7 @@ mcp-pkg-local/
 
 ## Testing
 
-The project includes comprehensive tests using Vitest:
+The project includes comprehensive tests using Vitest with configurable timeouts:
 
 ```bash
 # Run all tests
@@ -374,20 +406,78 @@ npm run test:coverage
 npm run test:ui
 ```
 
+### Test Timeout Configuration
+
+Tests use centralized timeout presets that automatically adjust for CI environments:
+- **Short tests** (5s): Unit tests, quick validations
+- **Medium tests** (15s): Integration tests, package operations
+- **Long tests** (30s): End-to-end workflows, complex scenarios
+
+In CI environments, timeouts are automatically multiplied by 1.5x for reliability.
+
+Tests are run sequentially to avoid SQLite locking issues and race conditions.
+
 ## Configuration
 
 ### Environment Variables
 
+The following environment variables can be used to customize the behavior:
+
+#### Cache and Storage
+- `BOTTLE_CACHE_ROOT` - Custom cache directory for all package data (default: `.pkg-local-cache`)
+  - Example: `export BOTTLE_CACHE_ROOT=/tmp/pkg-cache`
+  - Used for: Package cache, SQLite database, bottle volumes
+
+#### Testing
+- `TEST_BASE_DIR` - Base directory for test temporary files (default: `output/test-temp`)
+- `PRESERVE_TEST_DIRS_ON_FAILURE` - Keep test directories on failure for debugging (default: `true` locally, `false` in CI)
+- `USE_SYSTEM_TEMP` - Use system temp directory instead of local (default: `false` locally, `true` in CI)
+
+#### Debugging
 - `DEBUG=mcp-pkg-local:*` - Enable debug logging
-- `NODE_ENV=production` - Production mode
+- `NODE_ENV=production` - Production mode (disables debug features)
+
+#### Timeout Configuration
+- `PKG_LOCAL_TIMEOUT_MULTIPLIER` - Multiplier for all operation timeouts (default: `1.0`)
+  - Example: `export PKG_LOCAL_TIMEOUT_MULTIPLIER=2` (doubles all timeouts)
+  - Useful for: Slow networks, CI environments, or debugging
+  
+The system uses activity-based timeouts that reset on stdout progress:
+- **Quick operations** (5s): Version checks, package listings
+- **Standard operations** (30s): Package installations, virtual environment creation
+- **Extended operations** (60s): Large installations (rarely used)
+
+Timeouts automatically reset when commands show progress output (downloads, installations).
+Error output (stderr) does NOT reset timeouts to prevent hanging on failing commands.
 
 ### Cache Management
 
 The cache system uses SQLite for optimal performance:
-- Location: `.pkg-local-cache/cache.db`
+- Location: `${BOTTLE_CACHE_ROOT}/cache.db` (or `.pkg-local-cache/cache.db` if not set)
 - Mode: WAL (Write-Ahead Logging) for concurrent access
 - TTL: 1-hour default validity
 - Refresh: Use `--forceRefresh` to force rescan
+
+#### Custom Cache Location
+
+You can customize the cache location using the `BOTTLE_CACHE_ROOT` environment variable:
+
+```bash
+# Absolute path
+export BOTTLE_CACHE_ROOT=/tmp/pkg-cache
+
+# Relative path (relative to project root)
+export BOTTLE_CACHE_ROOT=build/cache
+
+# In CI/CD environments
+export BOTTLE_CACHE_ROOT=${CI_PROJECT_DIR}/.pkg-cache
+```
+
+This is particularly useful for:
+- CI/CD environments where you want persistent cache between builds
+- Shared development environments
+- Docker containers with mounted cache volumes
+- Testing with isolated cache directories
 
 ## Supported Environments
 
@@ -437,19 +527,27 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ## Roadmap
 
-### v0.1.0 (Released)
+### v0.1.x (Released)
 - [x] Python virtual environment support
 - [x] Basic package scanning and reading
 - [x] MCP server implementation
 - [x] Caching system
-
-### v0.1.1 (Current)
 - [x] Performance optimizations (90% token reduction)
 - [x] Advanced filtering (regex, category, groups)
 - [x] Lazy file tree loading
 - [x] Summary mode for minimal tokens
 - [x] Node.js/JavaScript support
 - [x] Multi-package manager support
+
+### v0.2.0 (Current)
+- [x] Bottles architecture for isolated package operations
+- [x] Shell-RPC engine with activity-based timeouts
+- [x] Volume controller for cache management
+- [x] Dynamic tool detection (no hardcoded paths)
+- [x] AST extraction for TypeScript/JavaScript (99.7% reduction)
+- [x] Simplified API (77% parameter reduction)
+- [x] 300+ tests with 14 CI stages
+- [x] Production-ready error handling
 
 ### Future Versions
 - [ ] Python dependency categorization (critical)

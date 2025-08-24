@@ -1,46 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { join, relative, basename } from 'node:path';
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const BINARY_EXTENSIONS = new Set([
-  '.pyc',
-  '.pyo',
-  '.pyd',
-  '.so',
-  '.dll',
-  '.dylib',
-  '.exe',
-  '.bin',
-  '.dat',
-  '.db',
-  '.sqlite',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.bmp',
-  '.zip',
-  '.tar',
-  '.gz',
-  '.bz2',
-  '.xz',
-]);
-
-export async function readFileWithSizeCheck(path: string): Promise<string> {
-  const stats = await fs.stat(path);
-
-  if (stats.size > MAX_FILE_SIZE) {
-    throw new Error(`File too large: ${stats.size} bytes (max: ${MAX_FILE_SIZE} bytes)`);
-  }
-
-  // Check if binary file
-  const ext = path.substring(path.lastIndexOf('.'));
-  if (BINARY_EXTENSIONS.has(ext.toLowerCase())) {
-    throw new Error(`Cannot read binary file: ${basename(path)}`);
-  }
-
-  return fs.readFile(path, 'utf-8');
-}
+import { join, relative } from 'node:path';
 
 export async function generateFileTree(
   rootPath: string,
@@ -97,18 +56,4 @@ export async function generateFileTree(
 
   await walk(rootPath, 0);
   return files.sort();
-}
-
-export function sanitizePath(basePath: string, requestedPath: string): string {
-  // Normalize and resolve the path
-  const resolved = join(basePath, requestedPath);
-
-  // Ensure the resolved path is within the base path
-  const relative_path = relative(basePath, resolved);
-
-  if (relative_path.startsWith('..') || resolved === basePath) {
-    throw new Error('Invalid path: outside of package directory');
-  }
-
-  return resolved;
 }

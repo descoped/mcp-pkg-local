@@ -347,18 +347,3 @@ export function isInGroup(packageName: string, group: PackageGroup): boolean {
 
   return false;
 }
-
-/**
- * Get all groups a package belongs to
- */
-export function getPackageGroups(packageName: string): PackageGroup[] {
-  const groups: PackageGroup[] = [];
-
-  for (const group of Object.keys(PACKAGE_GROUPS) as PackageGroup[]) {
-    if (isInGroup(packageName, group)) {
-      groups.push(group);
-    }
-  }
-
-  return groups;
-}

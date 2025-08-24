@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { promises as fs } from 'node:fs';
 import { existsSync } from 'node:fs';
-import type { ScanResult, PackageInfo } from '#types';
+import type { ScanResult, BasicPackageInfo } from '#scanners/types.js';
+import { getCachePaths } from '#utils/cache-paths.js';
 
 // Test SQLite cache directly
 describe.sequential('SQLite Cache Direct Benchmark', () => {
@@ -38,7 +39,7 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
       // Create test data
       const testData: ScanResult = {
         success: true,
-        packages: {} as Record<string, PackageInfo>,
+        packages: {} as Record<string, BasicPackageInfo>,
         environment: {
           type: 'npm' as const,
           path: testDir,
@@ -50,19 +51,16 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
 
       // Add many packages for realistic test
       for (let i = 0; i < 500; i++) {
-        testData.packages[`package-${i}`] = {
-          name: `package-${i}`,
-          version: `1.0.${i}`,
-          location: `node_modules/package-${i}`,
-          language: 'javascript' as const,
-          category: i % 2 === 0 ? ('production' as const) : ('development' as const),
-          relevanceScore: Math.random() * 1000,
-          popularityScore: Math.random() * 100,
-          fileCount: Math.floor(Math.random() * 100),
-          sizeBytes: Math.floor(Math.random() * 1000000),
-          hasTypes: i % 3 === 0,
-          isDirectDependency: i % 5 === 0,
-        };
+        if (testData.packages) {
+          testData.packages[`package-${i}`] = {
+            name: `package-${i}`,
+            version: `1.0.${i}`,
+            location: `node_modules/package-${i}`,
+            language: 'javascript' as const,
+            packageManager: 'npm',
+            hasTypes: i % 3 === 0,
+          };
+        }
       }
 
       const partitionKey = 'test-partition';
@@ -87,7 +85,7 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
         const result = cache.get(partitionKey);
         if (result) {
           readCount++;
-          expect(Object.keys(result.packages).length).toBe(500);
+          expect(Object.keys(result.packages ?? {}).length).toBe(500);
         }
       }
 
@@ -181,7 +179,7 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
     console.error('\n[BENCHMARK] === SQLite vs JSON Comparison ===');
 
     // Test with actual tools
-    const { scanPackagesTool } = await import('#tools/scan-packages');
+    const { scanPackagesTool } = await import('#tools/scan-packages.js');
 
     // Do multiple scans to test caching
     const times = {
@@ -192,12 +190,12 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
     for (let i = 0; i < 3; i++) {
       // Fresh scan
       const freshStart = Date.now();
-      await scanPackagesTool({ forceRefresh: true, limit: 100 });
+      await scanPackagesTool({ forceRefresh: true, scope: 'project' });
       times.fresh.push(Date.now() - freshStart);
 
       // Cached scan (should be faster)
       const cachedStart = Date.now();
-      await scanPackagesTool({ limit: 100 });
+      await scanPackagesTool({ scope: 'project' });
       times.cached.push(Date.now() - cachedStart);
 
       // Small delay between iterations
@@ -220,21 +218,22 @@ describe.sequential('SQLite Cache Direct Benchmark', () => {
     }
 
     // Check if SQLite is being used
-    const sqliteDbExists = existsSync('.pkg-local-cache.db');
-    const jsonCacheExists = existsSync('.pkg-local-cache');
+    const cachePaths = getCachePaths();
+    const sqliteDbExists = existsSync(cachePaths.sqliteDb);
+    const jsonCacheExists = existsSync(cachePaths.cacheDir);
 
     console.error('\n[BENCHMARK] Cache backend detection:');
     if (sqliteDbExists) {
-      console.error('  - ✅ SQLite database found (.pkg-local-cache.db)');
+      console.error(`  - ✅ SQLite database found (${cachePaths.sqliteDb})`);
 
       // Check database size
       const { statSync } = await import('node:fs');
-      const stats = statSync('.pkg-local-cache.db');
+      const stats = statSync(cachePaths.sqliteDb);
       const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
       console.error(`  - Database size: ${sizeMB} MB`);
     }
     if (jsonCacheExists) {
-      console.error('  - ℹ️ JSON cache directory found (.pkg-local-cache/)');
+      console.error(`  - ℹ️ JSON cache directory found (${cachePaths.cacheDir}/)`);
     }
 
     // The key metric is whether caching provides any benefit

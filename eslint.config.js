@@ -59,6 +59,7 @@ export default [
       'dist/**',
       'node_modules/**',
       'coverage/**',
+      'output/**',
       '*.config.js',
       '*.config.ts',
       '.venv/**',

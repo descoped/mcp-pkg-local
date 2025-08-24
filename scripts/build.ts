@@ -57,18 +57,53 @@ async function fixImports(dir: string): Promise<void> {
       let content = await fs.readFile(fullPath, 'utf-8');
       
       // Replace # imports with relative imports
-      content = content.replace(/#server/g, './server.js');
-      content = content.replace(/#types/g, './types.js');
-      content = content.replace(/#scanners\/([^'"\s;]+)/g, './scanners/$1.js');
-      content = content.replace(/#tools\/([^'"\s;]+)/g, './tools/$1.js');
-      content = content.replace(/#utils\/([^'"\s;]+)/g, './utils/$1.js');
+      // Handle imports that already have .js extension to avoid double .js.js
+      content = content.replace(/#server\.js/g, './server.js');
+      content = content.replace(/#server(?!\.)/g, './server.js');
+      
+      // For paths with submodules, handle both with and without .js
+      content = content.replace(/#types\/([^'"\s;]+)\.js/g, './types/$1.js');
+      content = content.replace(/#types\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./types/${p1}` : `./types/${p1}.js`;
+      });
+      content = content.replace(/#types\.js/g, './types.js');
+      content = content.replace(/#types(?![/.])/g, './types.js');
+      
+      content = content.replace(/#scanners\/([^'"\s;]+)\.js/g, './scanners/$1.js');
+      content = content.replace(/#scanners\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./scanners/${p1}` : `./scanners/${p1}.js`;
+      });
+      
+      content = content.replace(/#tools\/([^'"\s;]+)\.js/g, './tools/$1.js');
+      content = content.replace(/#tools\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./tools/${p1}` : `./tools/${p1}.js`;
+      });
+      
+      content = content.replace(/#utils\/([^'"\s;]+)\.js/g, './utils/$1.js');
+      content = content.replace(/#utils\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./utils/${p1}` : `./utils/${p1}.js`;
+      });
+      
+      content = content.replace(/#adapters\/([^'"\s;]+)\.js/g, './adapters/$1.js');
+      content = content.replace(/#adapters\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./adapters/${p1}` : `./adapters/${p1}.js`;
+      });
+      
+      content = content.replace(/#parsers\/([^'"\s;]+)\.js/g, './parsers/$1.js');
+      content = content.replace(/#parsers\/([^'"\s;]+)/g, (_match: string, p1: string) => {
+        return p1.endsWith('.js') ? `./parsers/${p1}` : `./parsers/${p1}.js`;
+      });
       
       // Fix nested imports
-      if (fullPath.includes('/scanners/') || fullPath.includes('/tools/') || fullPath.includes('/utils/')) {
+      if (fullPath.includes('/scanners/') || fullPath.includes('/tools/') || fullPath.includes('/utils/') || 
+          fullPath.includes('/adapters/') || fullPath.includes('/parsers/')) {
         content = content.replace(/\.\/types\.js/g, '../types.js');
+        content = content.replace(/\.\/types\//g, '../types/');
         content = content.replace(/\.\/scanners\//g, '../scanners/');
         content = content.replace(/\.\/tools\//g, '../tools/');
         content = content.replace(/\.\/utils\//g, '../utils/');
+        content = content.replace(/\.\/adapters\//g, '../adapters/');
+        content = content.replace(/\.\/parsers\//g, '../parsers/');
       }
       
       await fs.writeFile(fullPath, content, 'utf-8');

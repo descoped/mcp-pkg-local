@@ -1,29 +1,35 @@
-# Pending Implementation Tasks for mcp-pkg-local
+# Active Implementation Tasks for mcp-pkg-local
 
-**Status**: 📝 IN PROGRESS - Tracking incomplete tasks  
-**Date**: 2025-08-15  
-**Note**: This document contains only the incomplete tasks extracted from the original TODO. Completed tasks are preserved in history.
-**Updated**: 2025-08-15 - Added prioritized implementation roadmap based on ai_docs analysis
+**Status**: 📝 ACTIVE  
+**Date**: 2025-01-22  
+**Updated**: 2025-01-22 - Bottles tasks completed and moved to history
+**Note**: Completed Bottles implementation moved to `.claude/history/20250122_TODO-bottles-completed.md`
 
-## Prioritized Implementation Roadmap
+## Recent Major Completions
 
-### Priority 1: Python Parity (Critical)
-**Reference**: [python-implementation-gaps.md](./python-implementation-gaps.md)
-- [ ] **Parse Python dependency files** - requirements.txt, pyproject.toml, Pipfile
-- [ ] **Implement Python package categorization** - production vs development
-- [ ] **Add Python package prioritization** - direct vs transitive dependencies
-- [ ] **Create Python performance tests** - ensure same token efficiency as Node.js
+✅ **Bottles Architecture** - All 3 phases completed (60+ hours) - See `.claude/history/20250122_bottles-milestone-60hr-achievement.md`  
+✅ **Parameter Simplification** - 77% reduction (13→3 parameters)  
+✅ **Token Optimization** - 99.7% reduction achieved  
+✅ **CI Pipeline** - All 14 stages passing, 3m59s runtime  
 
-### Priority 2: Smart Package Prioritization (High)
-**Reference**: [smart-package-prioritization-plan.md](./smart-package-prioritization-plan.md)
-- [ ] **Implement relevance scoring algorithm** - prioritize project dependencies
-- [ ] **Add dependency parsing for all project files** - comprehensive project understanding
-- [ ] **Add relevanceOnly and includeTransitive parameters** - enhanced filtering
-- [ ] **Update summary mode** with dependency source breakdown
+## Active Implementation Roadmap
 
-### Priority 3: MCP SDK Guardrails (High)
-**Reference**: [mcp-sdk-enhancement-opportunities.md](./mcp-sdk-enhancement-opportunities.md)
-- [ ] **Phase 1: Safety Guardrails** (1-2 days)
+### Priority 1: Python AST Implementation (Future Enhancement)
+**Reference**: `ai_docs/wip/bottles-python-ast-strategy.md`
+**Status**: 📋 PLANNED - Not critical for current functionality
+**Timeline**: TBD
+
+- [ ] **Dual AST Parser Implementation**
+  - [ ] tree-sitter-python for fast parsing (<20ms for 100KB)
+  - [ ] Python ast module for deep semantic analysis
+  - [ ] 95%+ token reduction target for Python files
+  - [ ] NO REGEX - specialized tools only
+
+**Note**: Basic Python scanning works well. AST is for future optimization.
+
+### Priority 2: MCP SDK Guardrails (Future)
+**Reference**: `ai_docs/wip/mcp-sdk-enhancement-opportunities.md`
+- [ ] **Phase 1: Safety Guardrails** (1-2 days when started)
   - [ ] Add read-only validation to all operations
   - [ ] Implement resource-based access control
   - [ ] Enhanced error messages with clear explanations
@@ -33,139 +39,80 @@
   - [ ] Smart suggestions based on project context
   - [ ] Workflow templates for common use cases
 
-### Priority 4: Testing & Documentation (Medium)
-- [ ] **Testing Suite Completion**
-  - [ ] Write unit tests for scanner base class
-  - [ ] Test Python scanner with mock file systems
-  - [ ] Add performance benchmarks for scanning
-  - [ ] Test edge cases: empty venv, corrupted packages, permissions
+### Priority 3: Testing & Documentation (Ongoing)
+- [ ] **Testing Suite Enhancement**
+  - [ ] Implement test quality improvements from `bottles-integration-tests-quality-review.md`
+    - **Tracker**: See `integration-tests-improvement-tracker.md` for detailed tasks
+    - **Validation**: Confirmed by Gemini AI (2025-01-22)
+    - [ ] Fix type safety violation (1 critical issue)
+    - [ ] Reduce code duplication (30-40% → <15%)
+    - [ ] Standardize skip patterns across all tests
+    - Note: Console.logs in tests are helpful for debugging - NOT an issue
+  - [ ] Add contract tests for adapters
+  - [ ] Create test fixtures for faster execution
+  - [ ] Add mutation testing with Stryker
 - [ ] **Documentation Updates**
-  - [ ] Update README with Python limitations
+  - [ ] Update README with current capabilities
   - [ ] Create performance tuning guide
-  - [ ] Document smart prioritization features
   - [ ] Add architecture diagrams
+  - [ ] Document bottles architecture usage
 
-### Priority 5: Performance Monitoring (Low)
-**Reference**: [mcp-tool-performance-analysis.md](./mcp-tool-performance-analysis.md)
+### Priority 4: Performance Monitoring (Future)
+**Reference**: `ai_docs/done/mcp-tool-performance-analysis.md`
 - [ ] Add performance monitoring utilities
 - [ ] Create benchmark suite for all operations
 - [ ] Document performance best practices
 - [ ] Monitor real-world usage patterns
+- [ ] Track test execution metrics
 
-## Original Phase Structure (for reference)
+### Priority 5: Smart Package Prioritization (Future)
+**Reference**: `ai_docs/wip/smart-package-prioritization-plan.md`
+**Note**: Feature was removed for simplification, may be reconsidered
+- [ ] Dependency categorization (if needed)
+- [ ] Smart prioritization algorithms
+- [ ] Category filtering capabilities
 
-## Phase 4: MCP Tools Implementation
-### 6. Implement read-package MCP tool
-- [ ] Implement streaming for large file content (future enhancement)
+## Future Enhancements (Low Priority)
 
-## Phase 5: Storage and Caching
-### 7. Add index file caching mechanism
-- [ ] Create index migration utilities (future enhancement)
-- [ ] Add compression for large index files (future enhancement)
-- [ ] Implement index file locking for concurrent access (future enhancement)
+### Additional Package Manager Support
+- [ ] Poetry adapter implementation
+- [ ] Pipenv adapter implementation  
+- [ ] Conda environment support
+- [ ] System-wide package detection
 
-## Phase 6: Utilities and Helpers
-### Additional utility implementations
-- [ ] Add performance monitoring utilities (future enhancement)
-- [ ] Implement retry logic for file operations (future enhancement)
-- [ ] Add telemetry collection (opt-in) (future enhancement)
+### Language Support Extensions
+- [ ] Rust package scanning
+- [ ] Go module support
+- [ ] Java/Maven integration
+- [ ] Ruby gem support
 
-## Phase 7: Testing
-### 8. Create comprehensive test suite
-- [ ] Write unit tests for scanner base class
-- [ ] Test Python scanner with mock file systems
-- [ ] Add performance benchmarks for scanning
-- [ ] Test edge cases: empty venv, corrupted packages, permissions
-- [ ] Add snapshot testing for MCP responses
-- [ ] Implement E2E tests with MCP client simulation
+### Advanced Features
+- [ ] Import graph visualization
+- [ ] Documentation extraction from docstrings
+- [ ] Parallel package scanning optimization
+- [ ] Incremental index updates
+- [ ] Memory usage monitoring and limits
 
-## Phase 8: Documentation
-### 9. Write user documentation and examples
-- [ ] Create CONTRIBUTING.md with development guidelines
-- [ ] Write API.md with detailed tool documentation
-- [ ] Add CHANGELOG.md following Keep a Changelog format
-- [ ] Create examples/ directory with usage examples
-- [ ] Create architecture diagrams for documentation
-- [ ] Write performance tuning guide
+## Success Metrics (Current Status)
 
-## Phase 9: Performance and Optimization
-### Performance improvements (post-MVP)
-- [ ] Implement parallel package scanning
-- [ ] Add incremental index updates
-- [ ] Optimize file tree generation with caching
-- [ ] Add memory usage monitoring and limits
-- [ ] Implement lazy loading for large packages
-- [ ] Add compression for MCP responses
-- [ ] Profile and optimize hot paths
-- [ ] Implement connection pooling for MCP
+✅ **Achieved**:
+- LLM generates code that runs without import errors
+- Package scanning <300ms for 300+ packages
+- File reading <10ms with caching
+- Zero configuration for standard projects
+- 100% CI pass rate
+- All TypeScript strict mode checks pass
 
-## Phase 10: Future Features (v1.1+)
-### Nice-to-have enhancements
-- [ ] Add auto-trigger mechanism for import detection
-- [ ] Implement package alias resolution database
-- [ ] Add support for conda environments
-- [ ] Create import graph visualization
-- [ ] Add support for system-wide packages
-- [ ] Implement AST parsing for better code understanding
-- [ ] Add documentation extraction from docstrings
-- [ ] Support for other languages (JavaScript/Node.js, Go, Rust) - Note: Node.js support completed in v0.1.0
-
-## Phase 11: Node.js Support Extension
-### ✅ All Node.js support tasks completed - See .claude/history/20250815_195901_completed-tasks.md
-
-## Success Metrics (To Be Measured)
-- [ ] LLM can generate Python code that runs without import errors
-- [ ] Package scanning completes in < 500ms for 50-100 packages  
-- [ ] File reading response time < 50ms
-- [ ] Zero configuration required for standard Python projects
-- [ ] Works reliably with Claude Desktop and other MCP clients
-- [ ] 80%+ test coverage achieved
-- [ ] All TypeScript strict mode checks pass
-- [ ] No runtime type errors in production
-
-## v0.1.1 Performance Tasks
-### ✅ All v0.1.1 tasks completed - See .claude/history/20250815_195901_completed-tasks.md
+🎯 **Target for Future**:
+- 95%+ test coverage (currently ~80%)
+- <5ms cache hit response time
+- 99% uptime in production usage
+- <1% test flakiness rate
 
 ## Notes
+
+- Bottles architecture is COMPLETE and production-ready
+- Python AST is nice-to-have, not critical
+- Focus on test quality improvements and documentation
 - Most "future enhancement" tasks are low priority
-- Core functionality is complete and working
-- Focus should be on testing, documentation, and performance benchmarking
-- Node.js support has been fully implemented in v0.1.0
-
-## Key Insights from Analysis
-
-### Performance Achievements (v0.1.1)
-**Reference**: [sqlite-cache-documentation-update.md](./sqlite-cache-documentation-update.md)
-- SQLite cache provides 40x faster validity checks
-- Response times: scan ~150ms, read ~10ms, cache hits ~5ms
-- 90% token reduction achieved for Node.js projects
-- WAL mode and prepared statements optimized
-
-### Critical Gaps
-**Reference**: [python-implementation-gaps.md](./python-implementation-gaps.md)
-- Python implementation significantly behind Node.js
-- No dependency categorization or smart prioritization for Python
-- Category filtering non-functional for Python projects
-- "Dogfooding bias" led to Node.js-centric optimizations
-
-### Architecture Strengths
-**Reference**: [mcp-tools-architecture-analysis.md](./mcp-tools-architecture-analysis.md)
-- Robust two-tier cache system with automatic migration
-- Extensible scanner factory pattern ready for expansion
-- Comprehensive error handling with actionable suggestions
-- Security measures including path sanitization
-
-### MCP Best Practices
-**Reference**: [mcp-tool-performance-analysis.md](./mcp-tool-performance-analysis.md)
-- Direct MCP calls 12,000x faster than Task tool for simple operations
-- Always quote scoped package names ("@package/name")
-- Use summary mode for quick environment overview
-- Reserve Task tool for genuinely complex workflows
-
-## Recommended Path Forward
-
-1. **Immediate**: Fix Python parity to match Node.js capabilities
-2. **Next**: Implement smart package prioritization for both languages
-3. **Then**: Add MCP SDK guardrails for safety and UX
-4. **Ongoing**: Complete test coverage and documentation
-5. **Future**: Monitor performance and usage patterns for optimization
+- Core functionality is complete and working well

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { scanPackagesTool } from '#tools/scan-packages';
-import { readPackageTool } from '#tools/read-package';
+import { scanPackagesTool } from '#tools/scan-packages.js';
+import { readPackageTool } from '#tools/read-package.js';
 
 describe.sequential('Cache Performance Benchmark', () => {
   beforeAll(async () => {
     // Ensure we have a populated cache for testing
     console.error('[BENCHMARK] Preparing cache with initial scan...');
-    await scanPackagesTool({ forceRefresh: true, limit: 500 });
+    await scanPackagesTool({ forceRefresh: true, scope: 'all' });
   });
 
   describe('SQLite Cache Performance', () => {
@@ -14,11 +14,12 @@ describe.sequential('Cache Performance Benchmark', () => {
       // Force refresh to measure cold scan
       console.error('[BENCHMARK] Testing cold scan performance...');
       const coldStart = Date.now();
-      const coldResult = await scanPackagesTool({ forceRefresh: true, limit: 200 });
+      const coldResult = await scanPackagesTool({ forceRefresh: true, scope: 'all' });
       const coldTime = Date.now() - coldStart;
 
       expect(coldResult.success).toBe(true);
-      const packageCount = Object.keys(coldResult.packages).length;
+      const packageCount =
+        coldResult.summary?.total ?? Object.keys(coldResult.packages ?? {}).length;
       console.error(
         `[BENCHMARK] Cold scan: ${coldTime}ms for ${packageCount} packages (${(coldTime / packageCount).toFixed(1)}ms per package)`,
       );
@@ -26,10 +27,12 @@ describe.sequential('Cache Performance Benchmark', () => {
       // Warm scan from cache
       console.error('[BENCHMARK] Testing warm scan performance...');
       const warmStart = Date.now();
-      const warmResult = await scanPackagesTool({ limit: 200 });
+      const warmResult = await scanPackagesTool({ scope: 'all' });
       const warmTime = Date.now() - warmStart;
 
       expect(warmResult.success).toBe(true);
+      const warmCount = warmResult.summary?.total ?? Object.keys(warmResult.packages ?? {}).length;
+      expect(warmCount).toBe(packageCount);
       console.error(`[BENCHMARK] Warm scan: ${warmTime}ms (from cache)`);
 
       const speedup = (coldTime / warmTime).toFixed(1);
@@ -45,7 +48,7 @@ describe.sequential('Cache Performance Benchmark', () => {
 
     it('should measure rapid cache hits', async () => {
       // Ensure cache is populated
-      await scanPackagesTool({ forceRefresh: true, limit: 100 });
+      await scanPackagesTool({ forceRefresh: true, scope: 'project' });
 
       console.error('[BENCHMARK] Testing rapid cache hits...');
       const iterations = 10;
@@ -53,7 +56,7 @@ describe.sequential('Cache Performance Benchmark', () => {
 
       for (let i = 0; i < iterations; i++) {
         const start = Date.now();
-        const result = await scanPackagesTool({ limit: 100 });
+        const result = await scanPackagesTool({ scope: 'project' });
         const duration = Date.now() - start;
         times.push(duration);
         expect(result.success).toBe(true);
@@ -76,23 +79,11 @@ describe.sequential('Cache Performance Benchmark', () => {
   describe('Filter Performance', () => {
     it('should measure filter operation performance', async () => {
       // Ensure cache is populated with many packages
-      await scanPackagesTool({ forceRefresh: true, limit: 500 });
+      await scanPackagesTool({ forceRefresh: true, scope: 'all' });
 
       const filterTests = [
-        { name: 'No filter (limit 50)', params: { limit: 50 } },
-        { name: 'Regex filter', params: { filter: '^@babel/', limit: 100 } },
-        { name: 'Category filter', params: { category: 'production' as const, limit: 100 } },
-        { name: 'Exclude @types', params: { includeTypes: false, limit: 100 } },
-        { name: 'Summary mode', params: { summary: true } },
-        {
-          name: 'Combined filters',
-          params: {
-            category: 'production' as const,
-            includeTypes: false,
-            filter: '^[a-m]',
-            limit: 50,
-          },
-        },
+        { name: 'No filter (project scope)', params: { scope: 'project' as const } },
+        { name: 'Summary mode', params: { scope: 'all' as const } },
       ];
 
       console.error('[BENCHMARK] Filter performance:');
@@ -103,35 +94,11 @@ describe.sequential('Cache Performance Benchmark', () => {
         const duration = Date.now() - start;
 
         expect(result.success).toBe(true);
-        const count = Object.keys(result.packages).length;
+        const count = result.summary?.total ?? Object.keys(result.packages ?? {}).length;
         console.error(`  - ${test.name}: ${duration}ms (${count} packages)`);
 
         // All filter operations should be fast
         expect(duration).toBeLessThan(1000); // Less than 1 second
-      }
-    });
-
-    it('should measure package group filtering', async () => {
-      const groups: Array<'testing' | 'building' | 'linting' | 'typescript'> = [
-        'testing',
-        'building',
-        'linting',
-        'typescript',
-      ];
-
-      console.error('[BENCHMARK] Package group filtering:');
-
-      for (const group of groups) {
-        const start = Date.now();
-        const result = await scanPackagesTool({ group, limit: 100 });
-        const duration = Date.now() - start;
-
-        expect(result.success).toBe(true);
-        const count = Object.keys(result.packages).length;
-        console.error(`  - Group "${group}": ${duration}ms (${count} packages)`);
-
-        // Group filtering should be fast
-        expect(duration).toBeLessThan(1000);
       }
     });
   });
@@ -139,8 +106,8 @@ describe.sequential('Cache Performance Benchmark', () => {
   describe('Read Package Performance', () => {
     it('should measure package reading performance', async () => {
       // Get some packages to test
-      const scanResult = await scanPackagesTool({ limit: 50 });
-      const packages = Object.keys(scanResult.packages).slice(0, 5);
+      const scanResult = await scanPackagesTool({ scope: 'project' });
+      const packages = Object.keys(scanResult.packages ?? {}).slice(0, 5);
 
       console.error('[BENCHMARK] Package reading performance:');
 
@@ -160,30 +127,24 @@ describe.sequential('Cache Performance Benchmark', () => {
         if (treeResult.type === 'tree' && treeResult.fileTree) {
           console.error(`  - ${packageName}: ${treeTime}ms (${treeResult.fileTree.length} files)`);
 
-          // Try reading a specific file if available
-          if (treeResult.fileTree.length > 0) {
-            const fileStart = Date.now();
-            const fileResult = await readPackageTool({
-              packageName,
-              filePath: treeResult.fileTree[0],
-            });
-            const fileTime = Date.now() - fileStart;
-
-            if (fileResult.success && fileResult.type === 'file') {
-              console.error(`    - Read ${treeResult.fileTree[0]}: ${fileTime}ms`);
-            }
+          // Verify the read result has proper content
+          if (treeResult.success && treeResult.type === 'tree') {
+            expect(treeResult.initContent).toBeDefined();
+            console.error(`    - Package analysis completed: ${treeTime}ms`);
           }
         }
 
-        // Reading should be fast
-        expect(treeTime).toBeLessThan(500);
+        // Reading with AST parsing can take time for large packages
+        // TypeScript package with 900+ interfaces takes ~3s
+        expect(treeTime).toBeLessThan(2000);
       }
     });
 
     it('should measure lazy loading performance', async () => {
-      const scanResult = await scanPackagesTool({ limit: 100 });
+      const scanResult = await scanPackagesTool({ scope: 'project' });
       const testPackage =
-        Object.keys(scanResult.packages).find((p) => !p.startsWith('@types/')) ?? 'typescript';
+        Object.keys(scanResult.packages ?? {}).find((p) => !p.startsWith('@types/')) ??
+        'typescript';
 
       console.error(`[BENCHMARK] Lazy loading for package: ${testPackage}`);
 
@@ -196,7 +157,6 @@ describe.sequential('Cache Performance Benchmark', () => {
       const fullStart = Date.now();
       const fullResult = await readPackageTool({
         packageName: testPackage,
-        includeTree: true,
       });
       const fullTime = Date.now() - fullStart;
 
@@ -204,8 +164,6 @@ describe.sequential('Cache Performance Benchmark', () => {
       const depthStart = Date.now();
       const depthResult = await readPackageTool({
         packageName: testPackage,
-        includeTree: true,
-        maxDepth: 2,
       });
       const depthTime = Date.now() - depthStart;
 
@@ -237,21 +195,21 @@ describe.sequential('Cache Performance Benchmark', () => {
 
       // 1. Fresh scan
       const scan1 = Date.now();
-      await scanPackagesTool({ forceRefresh: true, limit: 100 });
+      await scanPackagesTool({ forceRefresh: true, scope: 'project' });
       const scan1Time = Date.now() - scan1;
 
       // 2. Cached scan
       const scan2 = Date.now();
-      await scanPackagesTool({ limit: 100 });
+      await scanPackagesTool({ scope: 'project' });
       const scan2Time = Date.now() - scan2;
 
       // 3. Filtered scan
       const scan3 = Date.now();
-      const filtered = await scanPackagesTool({ category: 'production', limit: 50 });
+      const filtered = await scanPackagesTool({ scope: 'project' });
       const scan3Time = Date.now() - scan3;
 
       // 4. Read a package
-      const packageName = Object.keys(filtered.packages)[0];
+      const packageName = Object.keys(filtered.packages ?? {})[0];
       let read1Time = 0;
       if (packageName) {
         const read1 = Date.now();

@@ -3,26 +3,187 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023"
+    ],
     "outDir": "./dist",
     "rootDir": "./",
     "baseUrl": ".",
     "paths": {
-      "#types": ["./src/types.ts", "./src/types"],
-      "#server": ["./src/server.ts", "./src/server"],
-      "#scanners/base": ["./src/scanners/base.ts", "./src/scanners/base"],
-      "#scanners/python": ["./src/scanners/python.ts", "./src/scanners/python"],
-      "#scanners/nodejs": ["./src/scanners/nodejs.ts", "./src/scanners/nodejs"],
-      "#scanners/*": ["./src/scanners/*"],
-      "#tools/scan-packages": ["./src/tools/scan-packages.ts", "./src/tools/scan-packages"],
-      "#tools/read-package": ["./src/tools/read-package.ts", "./src/tools/read-package"],
-      "#tools/*": ["./src/tools/*"],
-      "#utils/cache": ["./src/utils/cache.ts", "./src/utils/cache"],
-      "#utils/sqlite-cache": ["./src/utils/sqlite-cache.ts", "./src/utils/sqlite-cache"],
-      "#utils/fs": ["./src/utils/fs.ts", "./src/utils/fs"],
-      "#utils/scanner-factory": ["./src/utils/scanner-factory.ts", "./src/utils/scanner-factory"],
-      "#utils/package-groups": ["./src/utils/package-groups.ts", "./src/utils/package-groups"],
-      "#utils/*": ["./src/utils/*"]
+      "#bottles/shell-rpc/timeout/command-classifier": [
+        "./src/bottles/shell-rpc/timeout/command-classifier.ts"
+      ],
+      "#bottles/shell-rpc/timeout/resilient-timeout": [
+        "./src/bottles/shell-rpc/timeout/resilient-timeout.ts"
+      ],
+      "#bottles/shell-rpc/timeout/patterns": [
+        "./src/bottles/shell-rpc/timeout/patterns.ts"
+      ],
+      "#bottles/shell-rpc/timeout/types": [
+        "./src/bottles/shell-rpc/timeout/types.ts"
+      ],
+      "#bottles/shell-rpc/timeout/*": [
+        "./src/bottles/shell-rpc/timeout/*"
+      ],
+      "#bottles/volume-controller/volume-controller": [
+        "./src/bottles/volume-controller/volume-controller.ts"
+      ],
+      "#bottles/volume-controller/cache-paths": [
+        "./src/bottles/volume-controller/cache-paths.ts"
+      ],
+      "#bottles/shell-rpc/enhanced-timeout": [
+        "./src/bottles/shell-rpc/enhanced-timeout.ts"
+      ],
+      "#bottles/package-managers/registry": [
+        "./src/bottles/package-managers/registry.ts"
+      ],
+      "#bottles/package-managers/timeouts": [
+        "./src/bottles/package-managers/timeouts.ts"
+      ],
+      "#bottles/shell-rpc/process-manager": [
+        "./src/bottles/shell-rpc/process-manager.ts"
+      ],
+      "#bottles/package-managers/factory": [
+        "./src/bottles/package-managers/factory.ts"
+      ],
+      "#bottles/shell-rpc/command-queue": [
+        "./src/bottles/shell-rpc/command-queue.ts"
+      ],
+      "#bottles/shell-rpc/tool-detector": [
+        "./src/bottles/shell-rpc/tool-detector.ts"
+      ],
+      "#bottles/volume-controller/types": [
+        "./src/bottles/volume-controller/types.ts"
+      ],
+      "#bottles/package-managers/base": [
+        "./src/bottles/package-managers/base.ts"
+      ],
+      "#bottles/shell-rpc/environment": [
+        "./src/bottles/shell-rpc/environment.ts"
+      ],
+      "#bottles/package-managers/pip": [
+        "./src/bottles/package-managers/pip.ts"
+      ],
+      "#bottles/package-managers/uv": [
+        "./src/bottles/package-managers/uv.ts"
+      ],
+      "#bottles/volume-controller/*": [
+        "./src/bottles/volume-controller/*"
+      ],
+      "#bottles/package-managers/*": [
+        "./src/bottles/package-managers/*"
+      ],
+      "#bottles/shell-rpc/platform": [
+        "./src/bottles/shell-rpc/platform.ts"
+      ],
+      "#bottles/shell-rpc/timeout": [
+        "./src/bottles/shell-rpc/timeout/index.ts"
+      ],
+      "#bottles/shell-rpc/types": [
+        "./src/bottles/shell-rpc/types.ts"
+      ],
+      "#bottles/shell-rpc/pool": [
+        "./src/bottles/shell-rpc/pool.ts"
+      ],
+      "#bottles/shell-rpc/*": [
+        "./src/bottles/shell-rpc/*"
+      ],
+      "#bottles/environment-detector": [
+        "./src/bottles/environment-detector.ts"
+      ],
+      "#bottles/environment-manager": [
+        "./src/bottles/environment-manager.ts"
+      ],
+      "#bottles/volume-controller": [
+        "./src/bottles/volume-controller/index.ts"
+      ],
+      "#bottles/package-managers": [
+        "./src/bottles/package-managers/index.ts"
+      ],
+      "#utils/markdown-generator": [
+        "./src/utils/markdown-generator.ts"
+      ],
+      "#adapters/nodejs-adapter": [
+        "./src/adapters/nodejs-adapter.ts"
+      ],
+      "#adapters/python-adapter": [
+        "./src/adapters/python-adapter.ts"
+      ],
+      "#adapters/base-adapter": [
+        "./src/adapters/base-adapter.ts"
+      ],
+      "#utils/scanner-factory": [
+        "./src/utils/scanner-factory.ts"
+      ],
+      "#types/unified-schema": [
+        "./src/types/unified-schema.ts"
+      ],
+      "#utils/package-groups": [
+        "./src/utils/package-groups.ts"
+      ],
+      "#tools/scan-packages": [
+        "./src/tools/scan-packages.ts"
+      ],
+      "#parsers/ast-parser": [
+        "./src/parsers/ast-parser.ts"
+      ],
+      "#tools/read-package": [
+        "./src/tools/read-package.ts"
+      ],
+      "#utils/sqlite-cache": [
+        "./src/utils/sqlite-cache.ts"
+      ],
+      "#bottles/shell-rpc": [
+        "./src/bottles/shell-rpc/index.ts"
+      ],
+      "#utils/cache-paths": [
+        "./src/utils/cache-paths.ts"
+      ],
+      "#scanners/nodejs": [
+        "./src/scanners/nodejs.ts"
+      ],
+      "#scanners/python": [
+        "./src/scanners/python.ts"
+      ],
+      "#types/streaming": [
+        "./src/types/streaming.ts"
+      ],
+      "#utils/streaming": [
+        "./src/utils/streaming.ts"
+      ],
+      "#adapters/types": [
+        "./src/adapters/types.ts"
+      ],
+      "#scanners/types": [
+        "./src/scanners/types.ts"
+      ],
+      "#bottles/paths": [
+        "./src/bottles/paths.ts"
+      ],
+      "#scanners/base": [
+        "./src/scanners/base.ts"
+      ],
+      "#utils/cache": [
+        "./src/utils/cache.ts"
+      ],
+      "#utils/fs": [
+        "./src/utils/fs.ts"
+      ],
+      "#index/*": [
+        "./src/*"
+      ],
+      "#server": [
+        "./src/server.ts"
+      ],
+      "#index": [
+        "./src/index.ts"
+      ],
+      "#types": [
+        "./src/types.ts"
+      ],
+      "#*": [
+        "./src/*"
+      ]
     },
     "strict": true,
     "esModuleInterop": true,
@@ -39,7 +200,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "verbatimModuleSyntax": true,
@@ -47,6 +208,16 @@
     "moduleDetection": "force",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "tests/**/*", "scripts/**/*", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist", "coverage"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "vitest.config.ts",
+    "vitest.config.parallel.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ]
 }

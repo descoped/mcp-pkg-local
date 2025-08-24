@@ -1,31 +1,44 @@
-import { BaseScanner } from '#scanners/base';
-import type { ScanResult, EnvironmentInfo, PackageInfo } from '#types';
-import { EnvironmentNotFoundError } from '#types';
+import { BaseScanner } from '#scanners/base.js';
+import type {
+  BasicPackageInfo,
+  ScanOptions,
+  ScanResult,
+  EnvironmentInfo,
+} from '#scanners/types.js';
+import { EnvironmentNotFoundError } from '#types.js';
 import { join, basename } from 'node:path';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PackageScorer } from '#utils/package-scorer';
 
 const execAsync = promisify(exec);
 
 export class PythonScanner extends BaseScanner {
-  // LanguageScanner required properties
+  // Scanner identification properties
   readonly language = 'python' as const;
   readonly supportedPackageManagers = ['pip', 'poetry', 'uv', 'pipenv', 'conda'] as const;
-  readonly supportedExtensions = ['.py', '.pyi', '.pyx', '.pyd', '.so'] as const;
 
   private venvPath: string | null = null;
   private sitePackagesPath: string | null = null;
-  private packageCache = new Map<string, PackageInfo>();
+  private cachedPackageManager: string | null = null;
 
-  async scan(): Promise<ScanResult> {
-    const startTime = Date.now();
+  async scan(_options?: ScanOptions): Promise<ScanResult> {
     this.log('Starting Python environment scan');
 
     // Find virtual environment
     const envPath = await this.findVirtualEnvironment();
     if (!envPath) {
-      throw new EnvironmentNotFoundError();
+      // Handle empty environments gracefully - return empty result
+      this.log('No virtual environment found, returning empty result');
+      return {
+        success: true,
+        totalPackages: 0,
+        packages: {},
+        environment: {
+          type: 'system',
+          path: this.basePath,
+        },
+        scanTime: new Date().toISOString(),
+      };
     }
 
     this.venvPath = envPath;
@@ -43,30 +56,21 @@ export class PythonScanner extends BaseScanner {
     const environment = await this.getEnvironmentInfo();
 
     // Scan packages
-    let packages = await this.scanPackages();
-
-    // Apply relevance scoring to all packages
-    packages = PackageScorer.scorePackages(packages, this.basePath);
-
-    const scanDuration = Date.now() - startTime;
+    const packages = await this.scanPackages();
 
     return {
       success: true,
       packages,
-      environment: {
-        ...environment,
-        scanDurationMs: scanDuration,
-      },
+      environment,
       scanTime: new Date().toISOString(),
     };
   }
 
   async getPackageLocation(packageName: string): Promise<string | null> {
-    // Check cache first
-    const cached = this.packageCache.get(packageName);
-    if (cached) {
-      // Convert relative path back to absolute
-      return join(this.basePath, cached.location);
+    // Check cache first using base class method
+    const cachedLocation = this.getCachedPackageLocation(packageName);
+    if (cachedLocation) {
+      return cachedLocation;
     }
 
     // Ensure we have site-packages path
@@ -84,12 +88,33 @@ export class PythonScanner extends BaseScanner {
       normalizedName,
       packageName.replace('-', '_'),
       packageName.replace('_', '-'),
+      packageName.toLowerCase(),
+      packageName.toLowerCase().replace('-', '_'),
+      packageName.toLowerCase().replace('_', '-'),
     ];
 
     for (const name of possibleNames) {
       const packagePath = join(this.sitePackagesPath, name);
-      if ((await this.pathExists(packagePath)) && (await this.isDirectory(packagePath))) {
-        return packagePath;
+      if (await this.pathExists(packagePath)) {
+        // Check if it's a directory
+        if (await this.isDirectory(packagePath)) {
+          this.log(`Found package directory for ${packageName}: ${packagePath}`);
+          return packagePath;
+        }
+        // For some packages, the main module might be a single .py file
+        if (packagePath.endsWith('.py')) {
+          this.log(`Found package file for ${packageName}: ${packagePath}`);
+          return packagePath;
+        }
+      }
+    }
+
+    // Additional check: look for .py files with the package name
+    for (const name of possibleNames) {
+      const packageFilePath = join(this.sitePackagesPath, `${name}.py`);
+      if (await this.pathExists(packageFilePath)) {
+        this.log(`Found package file for ${packageName}: ${packageFilePath}`);
+        return packageFilePath;
       }
     }
 
@@ -97,12 +122,7 @@ export class PythonScanner extends BaseScanner {
   }
 
   async getPackageVersion(packageName: string): Promise<string | null> {
-    // Check cache first
-    const cached = this.packageCache.get(packageName);
-    if (cached) {
-      return cached.version;
-    }
-
+    // Try to get full package info and return just the version
     if (!this.sitePackagesPath) {
       const envPath = await this.findVirtualEnvironment();
       if (!envPath) return null;
@@ -118,13 +138,45 @@ export class PythonScanner extends BaseScanner {
       if (entry.endsWith('.dist-info')) {
         const prefix = entry.replace(/[-.]dist-info$/, '').toLowerCase();
         if (prefix === normalizedName || prefix === packageName.toLowerCase()) {
-          const version = await this.extractVersionFromDistInfo(join(this.sitePackagesPath, entry));
-          if (version) return version;
+          const packageInfo = await this.extractPackageInfoFromDistInfo(
+            join(this.sitePackagesPath, entry),
+          );
+          return packageInfo?.version ?? null;
         }
       }
     }
 
     return null;
+  }
+
+  async getPackageInfo(packageName: string): Promise<BasicPackageInfo | null> {
+    const packagePath = await this.getPackageLocation(packageName);
+    if (!packagePath) {
+      return null;
+    }
+
+    const version = await this.getPackageVersion(packageName);
+    if (!version) {
+      return null;
+    }
+
+    // Check for .pyi type stub files
+    let hasTypes = false;
+    try {
+      const entries = await this.readDir(packagePath);
+      hasTypes = entries.some((entry) => entry.endsWith('.pyi'));
+    } catch {
+      // Ignore errors checking for type stubs
+    }
+
+    return {
+      name: packageName,
+      version,
+      location: packagePath,
+      language: 'python',
+      packageManager: (await this.detectPackageManager()) ?? 'pip',
+      hasTypes,
+    };
   }
 
   async canHandle(basePath: string): Promise<boolean> {
@@ -146,59 +198,34 @@ export class PythonScanner extends BaseScanner {
   }
 
   async detectPackageManager(): Promise<string | null> {
+    // Return cached result if available
+    if (this.cachedPackageManager !== null) {
+      return this.cachedPackageManager;
+    }
+
     const basePath = this.basePath;
 
     // Check for package manager config files
     if (await this.pathExists(join(basePath, 'pyproject.toml'))) {
       const content = await this.readFile(join(basePath, 'pyproject.toml'));
-      if (content.includes('[tool.poetry]')) return 'poetry';
-      if (content.includes('[tool.uv]') || content.includes('uv.')) return 'uv';
-      return 'pip'; // Default for pyproject.toml
-    }
-    if (await this.pathExists(join(basePath, 'Pipfile'))) return 'pipenv';
-    if (await this.pathExists(join(basePath, 'environment.yml'))) return 'conda';
-    if (await this.pathExists(join(basePath, 'requirements.txt'))) return 'pip';
-
-    return 'pip'; // default
-  }
-
-  async isDependenciesInstalled(): Promise<boolean> {
-    return this.sitePackagesPath ? this.pathExists(this.sitePackagesPath) : false;
-  }
-
-  async getLockFilePath(): Promise<string | null> {
-    const basePath = this.basePath;
-    const lockFiles = [
-      'poetry.lock',
-      'Pipfile.lock',
-      'uv.lock',
-      'requirements.lock',
-      'requirements-lock.txt',
-    ];
-
-    for (const lockFile of lockFiles) {
-      const path = join(basePath, lockFile);
-      if (await this.pathExists(path)) {
-        return path;
+      if (content.includes('[tool.poetry]')) {
+        this.cachedPackageManager = 'poetry';
+      } else if (content.includes('[tool.uv]') || content.includes('uv.')) {
+        this.cachedPackageManager = 'uv';
+      } else {
+        this.cachedPackageManager = 'pip'; // Default for pyproject.toml
       }
+    } else if (await this.pathExists(join(basePath, 'Pipfile'))) {
+      this.cachedPackageManager = 'pipenv';
+    } else if (await this.pathExists(join(basePath, 'environment.yml'))) {
+      this.cachedPackageManager = 'conda';
+    } else if (await this.pathExists(join(basePath, 'requirements.txt'))) {
+      this.cachedPackageManager = 'pip';
+    } else {
+      this.cachedPackageManager = 'pip'; // default
     }
-    return null;
-  }
 
-  // Python doesn't have a standard "main" file like Node.js
-  async getPackageMainFile(packageName: string): Promise<string | null> {
-    const location = await this.getPackageLocation(packageName);
-    if (!location) return null;
-
-    // Check for __init__.py or __main__.py
-    const mainFiles = ['__init__.py', '__main__.py'];
-    for (const file of mainFiles) {
-      const path = join(location, file);
-      if (await this.pathExists(path)) {
-        return file;
-      }
-    }
-    return null;
+    return this.cachedPackageManager;
   }
 
   async getEnvironmentInfo(): Promise<EnvironmentInfo> {
@@ -242,35 +269,86 @@ export class PythonScanner extends BaseScanner {
   }
 
   private async findSitePackages(venvPath: string): Promise<string | null> {
-    // Common site-packages locations
-    const possiblePaths = [
-      // Unix/macOS
-      join(venvPath, 'lib', 'python3.13', 'site-packages'),
+    this.log(`Looking for site-packages in virtual environment: ${venvPath}`);
+
+    // First, try the most common locations
+    const commonPaths = [
+      // Windows
+      join(venvPath, 'Lib', 'site-packages'),
+      // Unix/macOS with common Python versions (most likely first)
       join(venvPath, 'lib', 'python3.12', 'site-packages'),
       join(venvPath, 'lib', 'python3.11', 'site-packages'),
       join(venvPath, 'lib', 'python3.10', 'site-packages'),
+      join(venvPath, 'lib', 'python3.13', 'site-packages'),
       join(venvPath, 'lib', 'python3.9', 'site-packages'),
-      // Windows
-      join(venvPath, 'Lib', 'site-packages'),
+      join(venvPath, 'lib', 'python3.8', 'site-packages'),
     ];
 
-    // Also check by listing lib directory
-    const libPath = join(venvPath, 'lib');
-    if ((await this.pathExists(libPath)) && (await this.isDirectory(libPath))) {
-      const entries = await this.readDir(libPath);
-      for (const entry of entries) {
-        if (entry.startsWith('python')) {
-          possiblePaths.unshift(join(libPath, entry, 'site-packages'));
-        }
-      }
-    }
-
-    for (const path of possiblePaths) {
+    // Check common paths first for performance
+    for (const path of commonPaths) {
+      this.log(`Checking common path: ${path}`);
       if ((await this.pathExists(path)) && (await this.isDirectory(path))) {
+        this.log(`Found site-packages at: ${path}`);
         return path;
       }
     }
 
+    // Dynamically discover Python versions by examining the lib directory
+    const libPath = join(venvPath, 'lib');
+    this.log(`Scanning lib directory for Python versions: ${libPath}`);
+
+    if ((await this.pathExists(libPath)) && (await this.isDirectory(libPath))) {
+      try {
+        const entries = await this.readDir(libPath);
+        this.log(`Found lib directory entries: ${entries.join(', ')}`);
+
+        // Sort by version to prefer newer versions
+        const pythonDirs = entries
+          .filter((entry) => entry.startsWith('python'))
+          .sort((a, b) => b.localeCompare(a)); // Descending order for newer versions first
+
+        for (const pythonDir of pythonDirs) {
+          const sitePackagesPath = join(libPath, pythonDir, 'site-packages');
+          this.log(`Checking dynamically found path: ${sitePackagesPath}`);
+
+          if (
+            (await this.pathExists(sitePackagesPath)) &&
+            (await this.isDirectory(sitePackagesPath))
+          ) {
+            this.log(`Found site-packages at: ${sitePackagesPath}`);
+            return sitePackagesPath;
+          }
+        }
+      } catch (error) {
+        this.log(`Error scanning lib directory: ${error}`);
+      }
+    }
+
+    // Last resort: check if there's a pyvenv.cfg file that might tell us the Python version
+    const pyvenvConfig = join(venvPath, 'pyvenv.cfg');
+    if (await this.pathExists(pyvenvConfig)) {
+      try {
+        const configContent = await this.readFile(pyvenvConfig);
+        const versionMatch = /version\s*=\s*(\d+\.\d+)/.exec(configContent);
+        if (versionMatch?.[1]) {
+          const pythonVersion = versionMatch[1];
+          const configBasedPath = join(venvPath, 'lib', `python${pythonVersion}`, 'site-packages');
+          this.log(`Checking pyvenv.cfg-based path: ${configBasedPath}`);
+
+          if (
+            (await this.pathExists(configBasedPath)) &&
+            (await this.isDirectory(configBasedPath))
+          ) {
+            this.log(`Found site-packages at: ${configBasedPath}`);
+            return configBasedPath;
+          }
+        }
+      } catch (error) {
+        this.log(`Error reading pyvenv.cfg: ${error}`);
+      }
+    }
+
+    this.log(`No site-packages directory found in virtual environment: ${venvPath}`);
     return null;
   }
 
@@ -301,30 +379,47 @@ export class PythonScanner extends BaseScanner {
     return 'unknown';
   }
 
-  private async scanPackages(): Promise<Record<string, PackageInfo>> {
+  private async scanPackages(): Promise<Record<string, BasicPackageInfo>> {
     const sitePackagesPath = this.sitePackagesPath;
     if (!sitePackagesPath) {
       throw new Error('Site-packages path not set');
     }
 
-    const packages: Record<string, PackageInfo> = {};
-    const entries = await this.readDir(sitePackagesPath);
+    this.log(`Scanning packages in site-packages: ${sitePackagesPath}`);
+    const packages: Record<string, BasicPackageInfo> = {};
+
+    let entries: string[];
+    try {
+      entries = await this.readDir(sitePackagesPath);
+      this.log(`Found ${entries.length} entries in site-packages`);
+    } catch (error) {
+      this.log(`Error reading site-packages directory: ${error}`);
+      return packages;
+    }
 
     // Process .dist-info directories for metadata
     const distInfoDirs = entries.filter((entry) => entry.endsWith('.dist-info'));
+    this.log(`Found ${distInfoDirs.length} .dist-info directories: ${distInfoDirs.join(', ')}`);
 
     for (const distInfo of distInfoDirs) {
+      this.log(`Processing dist-info directory: ${distInfo}`);
       const packageInfo = await this.extractPackageInfoFromDistInfo(
         join(sitePackagesPath, distInfo),
       );
 
       if (packageInfo) {
+        this.log(
+          `Successfully extracted package info for: ${packageInfo.name} (version: ${packageInfo.version})`,
+        );
         packages[packageInfo.name] = packageInfo;
-        this.packageCache.set(packageInfo.name, packageInfo);
+        this.locationCache.set(packageInfo.name, packageInfo.location);
+      } else {
+        this.log(`Failed to extract package info from: ${distInfo}`);
       }
     }
 
     // Also check for packages without .dist-info (editable installs, etc.)
+    let packageDirCount = 0;
     for (const entry of entries) {
       const entryPath = join(sitePackagesPath, entry);
 
@@ -338,31 +433,49 @@ export class PythonScanner extends BaseScanner {
         continue;
       }
 
+      packageDirCount++;
+
       // Check if it's a Python package (has __init__.py)
       const initPath = join(entryPath, '__init__.py');
       if (await this.pathExists(initPath)) {
         // If we don't already have info about this package
         // Store relative path from project root
-        const relativePath = entryPath
-          .replace(this.basePath + '/', '')
-          .replace(this.basePath + '\\', '');
-        packages[entry] ??= {
-          name: entry,
-          version: 'unknown',
-          location: relativePath,
-          language: 'python',
-          packageManager: 'pip',
-        };
+        const relativePath = this.toRelativePath(entryPath);
+        if (!packages[entry]) {
+          packages[entry] = {
+            name: entry,
+            version: 'unknown',
+            location: relativePath,
+            language: 'python',
+            packageManager: 'pip',
+          };
+          this.log(`Added package without .dist-info: ${entry}`);
+        }
       }
+    }
+
+    this.log(`Processed ${packageDirCount} potential package directories`);
+
+    const packageNames = Object.keys(packages);
+    this.log(`Found ${packageNames.length} packages total: ${packageNames.join(', ')}`);
+
+    // Log detailed package info for debugging
+    for (const [name, info] of Object.entries(packages)) {
+      this.log(
+        `Package details - ${name}: version=${info.version}, location=${info.location}, hasTypes=${info.hasTypes ?? false}`,
+      );
     }
 
     return packages;
   }
 
-  private async extractPackageInfoFromDistInfo(distInfoPath: string): Promise<PackageInfo | null> {
+  private async extractPackageInfoFromDistInfo(
+    distInfoPath: string,
+  ): Promise<BasicPackageInfo | null> {
     try {
       const metadataPath = join(distInfoPath, 'METADATA');
       if (!(await this.pathExists(metadataPath))) {
+        this.log(`METADATA file not found in ${distInfoPath}`);
         return null;
       }
 
@@ -371,46 +484,67 @@ export class PythonScanner extends BaseScanner {
       const versionMatch = /^Version:\s*(.+)$/m.exec(metadata);
 
       if (!nameMatch) {
+        this.log(`No Name field found in METADATA for ${distInfoPath}`);
         return null;
       }
 
       const name = nameMatch[1]?.trim() ?? '';
       const version = versionMatch?.[1]?.trim() ?? 'unknown';
 
-      // Find the actual package directory
-      const packageLoc = await this.getPackageLocation(name);
-      const location = packageLoc ?? distInfoPath;
+      if (!name) {
+        this.log(`Empty name extracted from ${distInfoPath}`);
+        return null;
+      }
+
+      // Find the actual package directory - but don't fail if we can't find it
+      let packageLoc: string | null = null;
+      try {
+        packageLoc = await this.getPackageLocation(name);
+      } catch (error) {
+        this.log(`Error getting package location for ${name}: ${error}`);
+      }
+
+      let location: string;
+
+      if (packageLoc) {
+        location = packageLoc;
+        this.log(`Found package directory for ${name}: ${packageLoc}`);
+      } else {
+        // Fallback: some packages might not have traditional directory structure
+        // Use the dist-info directory as the location
+        location = distInfoPath;
+        this.log(`Using dist-info as location for ${name}: ${distInfoPath}`);
+      }
 
       // Store relative path from project root
-      const relativeLoc = location
-        .replace(this.basePath + '/', '')
-        .replace(this.basePath + '\\', '');
+      let relativeLoc: string;
+      try {
+        relativeLoc = this.toRelativePath(location);
+      } catch (error) {
+        this.log(`Error converting to relative path for ${name}, using absolute path: ${error}`);
+        relativeLoc = location;
+      }
 
-      return {
+      // Get package manager (with fallback)
+      let packageManager = 'pip';
+      try {
+        packageManager = (await this.detectPackageManager()) ?? 'pip';
+      } catch (error) {
+        this.log(`Error detecting package manager for ${name}, using 'pip': ${error}`);
+      }
+
+      const packageInfo = {
         name,
         version,
         location: relativeLoc,
         language: 'python' as const,
-        packageManager: 'pip',
+        packageManager,
       };
+
+      this.log(`Successfully extracted package info for ${name} (version: ${version})`);
+      return packageInfo;
     } catch (error) {
       this.log(`Failed to extract info from ${distInfoPath}:`, error);
-      return null;
-    }
-  }
-
-  private async extractVersionFromDistInfo(distInfoPath: string): Promise<string | null> {
-    try {
-      const metadataPath = join(distInfoPath, 'METADATA');
-      if (!(await this.pathExists(metadataPath))) {
-        return null;
-      }
-
-      const metadata = await this.readFile(metadataPath);
-      const versionMatch = /^Version:\s*(.+)$/m.exec(metadata);
-
-      return versionMatch?.[1]?.trim() ?? null;
-    } catch {
       return null;
     }
   }

@@ -3,15 +3,10 @@ import { pack, unpack } from 'msgpackr';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import type {
-  ScanResult,
-  PackageInfo,
-  EnvironmentInfo,
-  SQLiteCacheConfig,
-  CacheEnvironment,
-  EnvironmentRow,
-  PackageRow,
-} from '#types';
+import type { SQLiteCacheConfig, EnvironmentRow, PackageRow } from '#types.js';
+import type { ScanResult, BasicPackageInfo, EnvironmentInfo } from '#scanners/types.js';
+import type { UnifiedPackageContent } from '#types/unified-schema.js';
+import { getSQLiteDbPath } from '#utils/cache-paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,7 +43,7 @@ export class SQLiteCache {
 
   constructor(config: Partial<SQLiteCacheConfig> = {}) {
     this.config = {
-      dbPath: config.dbPath ?? '.pkg-local-cache.db',
+      dbPath: config.dbPath ?? getSQLiteDbPath(),
       maxAge: config.maxAge ?? 7 * 24 * 60 * 60, // 7 days
       enableWAL: config.enableWAL !== false,
       enableFileCache: config.enableFileCache ?? false,
@@ -88,44 +83,42 @@ export class SQLiteCache {
     return {
       // Environment operations
       getEnvironment: this.db.prepare(`
-        SELECT * FROM environments 
+        SELECT * FROM environments
         WHERE partition_key = ?
       `),
 
       insertEnvironment: this.db.prepare(`
         INSERT INTO environments (
-          partition_key, project_path, language, package_manager, 
+          partition_key, project_path, language, package_manager,
           last_scan, scan_duration_ms, metadata
         ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
       `),
 
       updateEnvironment: this.db.prepare(`
-        UPDATE environments 
-        SET last_scan = CURRENT_TIMESTAMP, 
-            scan_duration_ms = ?, 
+        UPDATE environments
+        SET last_scan = CURRENT_TIMESTAMP,
+            scan_duration_ms = ?,
             metadata = ?,
             package_manager = ?
         WHERE partition_key = ?
       `),
 
       deleteOldEnvironments: this.db.prepare(`
-        DELETE FROM environments 
+        DELETE FROM environments
         WHERE last_scan < datetime('now', '-' || ? || ' seconds')
       `),
 
       // Package operations
       insertPackage: this.db.prepare(`
         INSERT OR REPLACE INTO packages (
-          environment_id, name, version, location, language, category,
-          relevance_score, popularity_score, file_count, size_bytes,
-          main_file, has_types, is_direct_dependency, metadata
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          environment_id, name, version, location, language,
+          has_type_definitions, unified_content
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `),
 
       updatePackage: this.db.prepare(`
-        UPDATE packages 
-        SET version = ?, location = ?, category = ?, 
-            relevance_score = ?, metadata = ?
+        UPDATE packages
+        SET version = ?, location = ?, unified_content = ?
         WHERE environment_id = ? AND name = ?
       `),
 
@@ -134,34 +127,34 @@ export class SQLiteCache {
       `),
 
       getPackagesByEnv: this.db.prepare(`
-        SELECT * FROM packages 
+        SELECT * FROM packages
         WHERE environment_id = ?
-        ORDER BY relevance_score DESC, name ASC
+        ORDER BY name ASC
       `),
 
       getPackageByName: this.db.prepare(`
-        SELECT p.*, e.partition_key 
+        SELECT p.*, e.partition_key
         FROM packages p
         JOIN environments e ON p.environment_id = e.id
         WHERE e.partition_key = ? AND p.name = ?
       `),
 
       getTopPackages: this.db.prepare(`
-        SELECT * FROM packages 
+        SELECT * FROM packages
         WHERE environment_id = ?
-        ORDER BY relevance_score DESC
+        ORDER BY name ASC
         LIMIT ?
       `),
 
       searchPackages: this.db.prepare(`
-        SELECT * FROM packages 
+        SELECT * FROM packages
         WHERE environment_id = ? AND name LIKE ?
-        ORDER BY relevance_score DESC
+        ORDER BY name ASC
       `),
 
       // Stats operations
       getStats: this.db.prepare(`
-        SELECT 
+        SELECT
           (SELECT COUNT(*) FROM environments) as environments,
           (SELECT COUNT(*) FROM packages) as packages,
           (SELECT AVG(scan_duration_ms) FROM environments) as avg_scan_duration,
@@ -169,8 +162,8 @@ export class SQLiteCache {
       `),
 
       updateLastAccess: this.db.prepare(`
-        UPDATE environments 
-        SET updated_at = CURRENT_TIMESTAMP 
+        UPDATE environments
+        SET updated_at = CURRENT_TIMESTAMP
         WHERE partition_key = ?
       `),
     };
@@ -186,7 +179,7 @@ export class SQLiteCache {
     const transaction = this.db.transaction(() => {
       // Check if environment exists
       const existingEnv = this.statements.getEnvironment.get(partitionKey) as
-        | CacheEnvironment
+        | EnvironmentRow
         | undefined;
 
       let environmentId: number;
@@ -208,9 +201,9 @@ export class SQLiteCache {
       } else {
         // Insert new environment
         // Determine language from packages or default to javascript
-        const firstPackageName = Object.keys(result.packages)[0];
+        const firstPackageName = Object.keys(result.packages ?? {})[0];
         const language =
-          firstPackageName && result.packages[firstPackageName]
+          firstPackageName && result.packages?.[firstPackageName]
             ? result.packages[firstPackageName].language
             : 'javascript';
 
@@ -226,8 +219,9 @@ export class SQLiteCache {
       }
 
       // Insert packages
-      for (const [name, pkg] of Object.entries(result.packages)) {
-        const metadataBlob = pack(pkg);
+      for (const [name, pkg] of Object.entries(result.packages ?? {})) {
+        // Pack unified content separately
+        const unifiedContentBlob = pkg.unifiedContent ? pack(pkg.unifiedContent) : null;
 
         this.statements.insertPackage.run(
           environmentId,
@@ -235,15 +229,8 @@ export class SQLiteCache {
           pkg.version,
           pkg.location,
           pkg.language,
-          pkg.category ?? null,
-          pkg.relevanceScore ?? 0,
-          pkg.popularityScore ?? 0,
-          pkg.fileCount ?? null,
-          pkg.sizeBytes ?? null,
-          pkg.mainFile ?? null,
-          pkg.hasTypes ? 1 : 0,
-          pkg.isDirectDependency ? 1 : 0,
-          metadataBlob,
+          pkg.hasTypes ? 1 : 0, // has_type_definitions
+          unifiedContentBlob, // Store unified content
         );
       }
     });
@@ -277,34 +264,38 @@ export class SQLiteCache {
     const packages = this.statements.getPackagesByEnv.all(env.id) as PackageRow[];
 
     // Build result
-    const packageMap: Record<string, PackageInfo> = {};
+    const packageMap: Record<string, BasicPackageInfo> = {};
     for (const pkg of packages) {
-      const metadata = unpack(pkg.metadata) as PackageInfo;
-      const result: PackageInfo = {
-        ...metadata,
-        relevanceScore: pkg.relevance_score,
-        popularityScore: pkg.popularity_score,
-        hasTypes: Boolean(pkg.has_types),
-        isDirectDependency: Boolean(pkg.is_direct_dependency),
-      };
+      // Unpack unified content if present
+      const unifiedContent = pkg.unified_content
+        ? (unpack(pkg.unified_content) as UnifiedPackageContent)
+        : undefined;
 
-      // Add optional properties only if they have values
-      if (pkg.file_count !== null) {
-        result.fileCount = pkg.file_count;
-      }
-      if (pkg.size_bytes !== null) {
-        result.sizeBytes = pkg.size_bytes;
-      }
-      if (pkg.main_file !== null) {
-        result.mainFile = pkg.main_file;
-      }
+      let result: BasicPackageInfo;
+      result = {
+        name: pkg.name,
+        version: pkg.version,
+        location: pkg.location,
+        language: pkg.language as 'python' | 'javascript',
+        packageManager: 'unknown', // Will be set from environment
+        hasTypes: Boolean(pkg.has_type_definitions),
+        unifiedContent,
+      };
 
       packageMap[pkg.name] = result;
     }
 
     const environment = unpack(env.metadata) as EnvironmentInfo;
 
-    const result: ScanResult = {
+    // Set packageManager from environment for all packages
+    for (const pkg of Object.values(packageMap)) {
+      if (pkg.packageManager === 'unknown' && environment.packageManager) {
+        pkg.packageManager = environment.packageManager;
+      }
+    }
+
+    let result: ScanResult;
+    result = {
       success: true,
       packages: packageMap,
       environment: environment,
@@ -312,17 +303,10 @@ export class SQLiteCache {
     };
 
     // Add scanDurationMs only if it has a value
-    if (env.scan_duration_ms !== null) {
-      result.environment = {
-        ...environment,
-        scanDurationMs: env.scan_duration_ms,
-      };
-    }
+    // scanDurationMs is not part of the scanner EnvironmentInfo type
 
     return result;
   }
-
-
 
   /**
    * Check if cache is valid for a partition
@@ -339,12 +323,10 @@ export class SQLiteCache {
     return ageSeconds <= this.config.maxAge;
   }
 
-
   /**
    * Close database connection
    */
   close(): void {
     this.db.close();
   }
-
 }

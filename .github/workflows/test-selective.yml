@@ -1,0 +1,147 @@
+name: Selective Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of tests to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - bottles
+          - bottles-integration
+          - performance
+          - fast
+          - slow
+      skip_build:
+        description: 'Skip build step'
+        required: false
+        default: false
+        type: boolean
+      test_filter:
+        description: 'Specific test pattern to run (e.g., "should install packages")'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  selective-test:
+    runs-on: ubuntu-latest
+    name: "Run ${{ github.event.inputs.test_type }} tests"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        if: contains(fromJSON('["all", "integration", "bottles", "bottles-integration", "slow"]'), github.event.inputs.test_type)
+
+      - name: Install uv (Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        if: contains(fromJSON('["all", "bottles", "bottles-integration", "slow"]'), github.event.inputs.test_type)
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Create test Python environment
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install requests flask pydantic sqlalchemy
+        if: contains(fromJSON('["all", "integration", "bottles-integration", "slow"]'), github.event.inputs.test_type)
+
+      - name: Build
+        run: npm run build
+        if: github.event.inputs.skip_build != 'true'
+
+      - name: Run all tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}"
+          else
+            npm test
+          fi
+        if: github.event.inputs.test_type == 'all'
+
+      - name: Run unit tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/unit
+          else
+            npm run test:unit
+          fi
+        if: github.event.inputs.test_type == 'unit'
+
+      - name: Run integration tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/integration
+          else
+            npm run test:integration
+          fi
+        if: github.event.inputs.test_type == 'integration'
+
+      - name: Run bottles tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/bottles --exclude='**/integration/**' --exclude='**/timeout/**'
+          else
+            npm run test:bottles
+          fi
+        if: github.event.inputs.test_type == 'bottles'
+
+      - name: Run bottles integration tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/bottles/integration
+          else
+            npm run test:bottles:integration
+          fi
+        if: github.event.inputs.test_type == 'bottles-integration'
+
+      - name: Run performance tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/performance
+          else
+            npm run test:performance
+          fi
+        if: github.event.inputs.test_type == 'performance'
+
+      - name: Run fast tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/unit tests/bottles --exclude='**/integration/**' --exclude='**/timeout/**'
+          else
+            npm run test:fast
+          fi
+        if: github.event.inputs.test_type == 'fast'
+
+      - name: Run slow tests
+        run: |
+          if [ -n "${{ inputs.test_filter }}" ]; then
+            npx vitest run --run -t "${{ inputs.test_filter }}" tests/integration tests/bottles/integration tests/performance
+          else
+            npm run test:slow
+          fi
+        if: github.event.inputs.test_type == 'slow'

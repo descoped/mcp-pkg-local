@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { PythonScanner } from '#scanners/python';
-import { scanPackagesTool } from '#tools/scan-packages';
-import { readPackageTool } from '#tools/read-package';
+import { PythonScanner } from '#scanners/python.js';
+import { scanPackagesTool } from '#tools/scan-packages.js';
+import { readPackageTool } from '#tools/read-package.js';
 import { join } from 'node:path';
 import { promises as fs } from 'node:fs';
 
@@ -24,7 +24,7 @@ import { promises as fs } from 'node:fs';
 // Test with external Python venv - disabled for clean autonomous codebase
 const AUTHLY_PATH = join(process.cwd(), '..', 'authly');
 
-// Always skip unless explicitly enabled via TEST_AUTHLY environment variable
+// Only define tests when explicitly enabled via TEST_AUTHLY environment variable
 describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment Integration', () => {
   beforeAll(async () => {
     // Check if authly venv exists
@@ -45,7 +45,7 @@ describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment I
       expect(result.success).toBe(true);
       expect(result.environment.type).toBe('.venv');
       expect(result.environment.pythonVersion).toMatch(/3\.11\.\d+/);
-      expect(Object.keys(result.packages).length).toBeGreaterThan(0);
+      expect(Object.keys(result.packages ?? {}).length).toBeGreaterThan(0);
     });
 
     it('should find common Python packages', async () => {
@@ -53,7 +53,7 @@ describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment I
       const result = await scanner.scan();
 
       // Check for some common packages that might be in authly
-      const packageNames = Object.keys(result.packages);
+      const packageNames = Object.keys(result.packages ?? {});
       // eslint-disable-next-line no-console
       console.log('Found packages:', packageNames.slice(0, 10).join(', '), '...');
 
@@ -68,11 +68,11 @@ describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment I
       process.chdir(AUTHLY_PATH);
 
       try {
-        const result = await scanPackagesTool({ forceRefresh: true });
+        const result = await scanPackagesTool({ forceRefresh: true, scope: 'project' });
 
         expect(result.success).toBe(true);
         expect(result.environment.pythonVersion).toMatch(/3\.11\.\d+/);
-        expect(Object.keys(result.packages).length).toBeGreaterThan(0);
+        expect(Object.keys(result.packages ?? {}).length).toBeGreaterThan(0);
       } finally {
         process.chdir(originalCwd);
       }
@@ -86,11 +86,11 @@ describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment I
 
       try {
         // First scan to populate cache
-        await scanPackagesTool({ forceRefresh: true });
+        await scanPackagesTool({ forceRefresh: true, scope: 'project' });
 
         // Try to read a common package (we'll check what's available first)
         const scanResult = await scanPackagesTool({ forceRefresh: false });
-        const firstPackage = Object.keys(scanResult.packages)[0];
+        const firstPackage = Object.keys(scanResult.packages ?? {})[0];
 
         if (firstPackage) {
           const result = await readPackageTool({
@@ -114,12 +114,12 @@ describe.skipIf(!process.env.TEST_AUTHLY)('External Python Virtual Environment I
 
       try {
         // First scan to populate cache
-        await scanPackagesTool({ forceRefresh: true });
+        await scanPackagesTool({ forceRefresh: true, scope: 'project' });
 
         // Try to read __init__.py from first package that has it
         const scanResult = await scanPackagesTool({ forceRefresh: false });
 
-        for (const packageName of Object.keys(scanResult.packages)) {
+        for (const packageName of Object.keys(scanResult.packages ?? {})) {
           const treeResult = await readPackageTool({ packageName });
 
           if (treeResult.type === 'tree' && treeResult.fileTree.includes('__init__.py')) {

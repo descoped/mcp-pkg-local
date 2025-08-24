@@ -16,17 +16,157 @@
       "development": "./src/types.ts",
       "default": "./dist/types.js"
     },
+    "#types/unified-schema": {
+      "development": "./src/types/unified-schema.ts",
+      "default": "./dist/types/unified-schema.js"
+    },
+    "#types/streaming": {
+      "development": "./src/types/streaming.ts",
+      "default": "./dist/types/streaming.js"
+    },
     "#scanners/*": {
       "development": "./src/scanners/*.ts",
       "default": "./dist/scanners/*.js"
+    },
+    "#scanners/base": {
+      "development": "./src/scanners/base.ts",
+      "default": "./dist/scanners/base.js"
+    },
+    "#scanners/nodejs": {
+      "development": "./src/scanners/nodejs.ts",
+      "default": "./dist/scanners/nodejs.js"
+    },
+    "#scanners/python": {
+      "development": "./src/scanners/python.ts",
+      "default": "./dist/scanners/python.js"
+    },
+    "#scanners/content-processor": {
+      "development": "./src/scanners/content-processor.ts",
+      "default": "./dist/scanners/content-processor.js"
     },
     "#tools/*": {
       "development": "./src/tools/*.ts",
       "default": "./dist/tools/*.js"
     },
+    "#tools/scan-packages": {
+      "development": "./src/tools/scan-packages.ts",
+      "default": "./dist/tools/scan-packages.js"
+    },
+    "#tools/read-package": {
+      "development": "./src/tools/read-package.ts",
+      "default": "./dist/tools/read-package.js"
+    },
     "#utils/*": {
       "development": "./src/utils/*.ts",
       "default": "./dist/utils/*.js"
+    },
+    "#utils/cache": {
+      "development": "./src/utils/cache.ts",
+      "default": "./dist/utils/cache.js"
+    },
+    "#utils/fs": {
+      "development": "./src/utils/fs.ts",
+      "default": "./dist/utils/fs.js"
+    },
+    "#utils/scanner-factory": {
+      "development": "./src/utils/scanner-factory.ts",
+      "default": "./dist/utils/scanner-factory.js"
+    },
+    "#utils/package-groups": {
+      "development": "./src/utils/package-groups.ts",
+      "default": "./dist/utils/package-groups.js"
+    },
+    "#utils/package-scorer": {
+      "development": "./src/utils/package-scorer.ts",
+      "default": "./dist/utils/package-scorer.js"
+    },
+    "#utils/markdown-generator": {
+      "development": "./src/utils/markdown-generator.ts",
+      "default": "./dist/utils/markdown-generator.js"
+    },
+    "#utils/sqlite-cache": {
+      "development": "./src/utils/sqlite-cache.ts",
+      "default": "./dist/utils/sqlite-cache.js"
+    },
+    "#utils/streaming": {
+      "development": "./src/utils/streaming.ts",
+      "default": "./dist/utils/streaming.js"
+    },
+    "#adapters/*": {
+      "development": "./src/adapters/*.ts",
+      "default": "./dist/adapters/*.js"
+    },
+    "#adapters/base-adapter": {
+      "development": "./src/adapters/base-adapter.ts",
+      "default": "./dist/adapters/base-adapter.js"
+    },
+    "#adapters/nodejs-adapter": {
+      "development": "./src/adapters/nodejs-adapter.ts",
+      "default": "./dist/adapters/nodejs-adapter.js"
+    },
+    "#adapters/python-adapter": {
+      "development": "./src/adapters/python-adapter.ts",
+      "default": "./dist/adapters/python-adapter.js"
+    },
+    "#parsers/ast-parser": {
+      "development": "./src/parsers/ast-parser.ts",
+      "default": "./dist/parsers/ast-parser.js"
+    },
+    "#bottles/*": {
+      "development": "./src/bottles/*.ts",
+      "default": "./dist/bottles/*.js"
+    },
+    "#bottles/shell-rpc": {
+      "development": "./src/bottles/shell-rpc/index.ts",
+      "default": "./dist/bottles/shell-rpc/index.js"
+    },
+    "#bottles/shell-rpc/environment": {
+      "development": "./src/bottles/shell-rpc/environment.ts",
+      "default": "./dist/bottles/shell-rpc/environment.js"
+    },
+    "#bottles/shell-rpc/timeout": {
+      "development": "./src/bottles/shell-rpc/timeout/index.ts",
+      "default": "./dist/bottles/shell-rpc/timeout/index.js"
+    },
+    "#bottles/shell-rpc/timeout/*": {
+      "development": "./src/bottles/shell-rpc/timeout/*.ts",
+      "default": "./dist/bottles/shell-rpc/timeout/*.js"
+    },
+    "#bottles/paths": {
+      "development": "./src/bottles/paths.ts",
+      "default": "./dist/bottles/paths.js"
+    },
+    "#bottles/volume-controller": {
+      "development": "./src/bottles/volume-controller/index.ts",
+      "default": "./dist/bottles/volume-controller/index.js"
+    },
+    "#bottles/volume-controller/*": {
+      "development": "./src/bottles/volume-controller/*.ts",
+      "default": "./dist/bottles/volume-controller/*.js"
+    },
+    "#bottles/package-managers/index": {
+      "development": "./src/bottles/package-managers/index.ts",
+      "default": "./dist/bottles/package-managers/index.js"
+    },
+    "#bottles/package-managers/base": {
+      "development": "./src/bottles/package-managers/base.ts",
+      "default": "./dist/bottles/package-managers/base.js"
+    },
+    "#bottles/package-managers/pip": {
+      "development": "./src/bottles/package-managers/pip.ts",
+      "default": "./dist/bottles/package-managers/pip.js"
+    },
+    "#bottles/package-managers/uv": {
+      "development": "./src/bottles/package-managers/uv.ts",
+      "default": "./dist/bottles/package-managers/uv.js"
+    },
+    "#bottles/package-managers/registry": {
+      "development": "./src/bottles/package-managers/registry.ts",
+      "default": "./dist/bottles/package-managers/registry.js"
+    },
+    "#bottles/environment-detector": {
+      "development": "./src/bottles/environment-detector.ts",
+      "default": "./dist/bottles/environment-detector.js"
     }
   },
   "scripts": {
@@ -34,14 +174,40 @@
     "build:verify": "npm run build && node -e \"const fs=require('fs'); if(fs.existsSync('dist/CLAUDE.md')||fs.existsSync('dist/ai_docs')) throw new Error('Build should exclude CLAUDE.md and ai_docs')\"",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
+    "update-paths": "tsx scripts/generate-tsconfig-paths.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:bottles": "vitest run tests/bottles/unit",
+    "test:bottles:integration": "vitest run tests/bottles/integration",
+    "test:bottles:integration:common": "vitest run tests/bottles/integration/common",
+    "test:bottles:integration:pip": "vitest run tests/bottles/integration/pip",
+    "test:bottles:integration:uv": "vitest run tests/bottles/integration/uv",
+    "test:ci:run": "vitest run --run",
+    "test:ci:run-pattern": "vitest run --run -t",
+    "test:timeout": "vitest run tests/bottles/timeout",
+    "test:performance": "vitest run tests/performance",
+    "test:fast": "vitest run tests/unit tests/bottles/unit",
+    "test:slow": "vitest run tests/integration tests/bottles/integration tests/performance",
+    "test:ci:stage1": "npm run test:unit",
+    "test:ci:stage2": "npm run test:timeout",
+    "test:ci:stage3": "npm run test:bottles",
+    "test:ci:stage4": "npm run test:integration",
+    "test:ci:stage5": "npm run test:ci:run tests/bottles/integration/common/integration-setup.test.ts",
+    "test:ci:stage6": "npm run test:ci:run tests/bottles/integration/common/ci-environment.test.ts",
+    "test:ci:stage7": "vitest run --config vitest.config.parallel.ts tests/bottles/integration/pip/*.test.ts",
+    "test:ci:stage8": "vitest run --config vitest.config.parallel.ts tests/bottles/integration/uv/*.test.ts",
+    "test:ci:stage9": "npm run test:ci:run tests/bottles/integration/common/cross-adapter-compatibility.test.ts",
+    "test:ci:stage10": "npm run test:ci:run tests/bottles/integration/common/volume-controller-cache.test.ts",
+    "test:ci:stage11": "npm run test:performance",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json coverage .nyc_output",
-    "clean:cache": "rm -rf .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json",
+    "typecheck:strict": "tsc --noEmit --noImplicitOverride --allowUnreachableCode false --allowUnusedLabels false --noPropertyAccessFromIndexSignature --exactOptionalPropertyTypes",
+    "clean": "rm -rf dist node_modules .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json coverage .nyc_output && ([ -n \"$BOTTLE_CACHE_ROOT\" ] && rm -rf \"$BOTTLE_CACHE_ROOT\" || true)",
+    "clean:cache": "rm -rf .pkg-local-cache .pkg-local-cache.db .pkg-local-index.json && ([ -n \"$BOTTLE_CACHE_ROOT\" ] && rm -rf \"$BOTTLE_CACHE_ROOT\" || true)",
     "prepare": "npm run build",
     "prepublishOnly": "npm run test && npm run lint"
   },
@@ -80,6 +246,9 @@
     "@modelcontextprotocol/sdk": "^1.17.3",
     "better-sqlite3": "^12.1.0",
     "msgpackr": "^1.11.5",
+    "node-pty": "^1.0.0",
+    "smol-toml": "^1.4.2",
+    "ts-morph": "^26.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

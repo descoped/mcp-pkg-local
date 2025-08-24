@@ -2,9 +2,9 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { scanPackagesTool } from '#tools/scan-packages';
-import { readPackageTool } from '#tools/read-package';
-import type { ReadPackageParams, ScanPackagesParams } from '#types';
+import { scanPackagesTool } from '#tools/scan-packages.js';
+import { readPackageTool } from '#tools/read-package.js';
+import type { ReadPackageParams, ScanPackagesParams } from '#types.js';
 
 const PKG_LOCAL_VERSION = '0.1.0';
 const DEBUG = process.env.DEBUG?.includes('mcp-pkg-local');
@@ -44,40 +44,16 @@ export function createServer(): Server {
       inputSchema: {
         type: 'object',
         properties: {
-          forceRefresh: {
-            type: 'boolean',
-            description: 'Force rescan even if index exists',
-            default: false,
-          },
-          filter: {
+          scope: {
             type: 'string',
-            description: 'Regex pattern to filter package names (e.g., "^@types/" or "eslint")',
-          },
-          limit: {
-            type: 'number',
-            description: 'Maximum number of packages to return (default: 50)',
-            default: 50,
-          },
-          summary: {
-            type: 'boolean',
-            description: 'Return only summary counts instead of full package list',
-            default: false,
-          },
-          category: {
-            type: 'string',
-            enum: ['production', 'development', 'all'],
-            description: 'Filter packages by category (production/development/all)',
+            enum: ['all', 'project'],
+            description: 'Scan all packages or only project dependencies (default: all)',
             default: 'all',
           },
-          includeTypes: {
+          forceRefresh: {
             type: 'boolean',
-            description: 'Include @types packages in results',
-            default: true,
-          },
-          group: {
-            type: 'string',
-            enum: ['testing', 'building', 'linting', 'typescript', 'framework', 'utility'],
-            description: 'Filter by predefined package group (testing, building, linting, etc.)',
+            description: 'Force rescan even if cached (default: false)',
+            default: false,
           },
         },
       },
@@ -91,24 +67,6 @@ export function createServer(): Server {
           packageName: {
             type: 'string',
             description: 'Name of the package to read',
-          },
-          filePath: {
-            type: 'string',
-            description: 'Specific file to read within the package (optional)',
-          },
-          includeTree: {
-            type: 'boolean',
-            description: 'Include full file tree (default: false, only shows main files)',
-            default: false,
-          },
-          maxDepth: {
-            type: 'number',
-            description: 'Maximum depth for file tree traversal (default: 2)',
-            default: 2,
-          },
-          pattern: {
-            type: 'string',
-            description: 'Glob pattern to filter files (e.g., "*.ts", "src/**")',
           },
         },
         required: ['packageName'],

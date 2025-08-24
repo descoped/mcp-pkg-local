@@ -1,35 +1,40 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { scanPackagesTool } from '#tools/scan-packages';
-import { readPackageTool } from '#tools/read-package';
+import { scanPackagesTool } from '#tools/scan-packages.js';
+import { readPackageTool } from '#tools/read-package.js';
 
 describe('Performance Features (v0.1.1)', () => {
   beforeAll(async () => {
     // Ensure we have a fresh cache for testing
-    await scanPackagesTool({ forceRefresh: true, limit: 500 });
+    await scanPackagesTool({ forceRefresh: true, scope: 'all' });
   });
 
   describe('scan-packages performance features', () => {
     it('should respect default limit of 50 packages', async () => {
+      // Default scope is 'all' which returns summary - should not have packages
       const result = await scanPackagesTool({});
 
       expect(result.success).toBe(true);
-      const packageCount = Object.keys(result.packages).length;
-      expect(packageCount).toBeLessThanOrEqual(50);
+      expect(result.type).toBe('summary');
+      expect(result.summary?.total).toBeGreaterThan(0);
     });
 
     it('should allow custom limits', async () => {
-      const result = await scanPackagesTool({ limit: 10 });
+      const result = await scanPackagesTool({ scope: 'project' });
 
       expect(result.success).toBe(true);
-      const packageCount = Object.keys(result.packages).length;
-      expect(packageCount).toBeLessThanOrEqual(10);
+      const packageCount = Object.keys(result.packages ?? {}).length;
+      // Project scope returns only direct dependencies, so count should be reasonable
+      expect(packageCount).toBeGreaterThan(0);
+      expect(packageCount).toBeLessThanOrEqual(50); // More reasonable limit for project dependencies
     });
 
     it('should return summary mode with minimal data', async () => {
-      const result = await scanPackagesTool({ summary: true });
+      // scope: 'all' gives summary by default
+      const result = await scanPackagesTool({ scope: 'all' });
 
       expect(result.success).toBe(true);
-      expect(result.packages).toEqual({}); // No packages in summary mode
+      expect(result.type).toBe('summary');
+      expect(result.packages).toBeUndefined(); // Summary mode intentionally omits packages
       expect(result.summary).toBeDefined();
       expect(result.summary?.total).toBeGreaterThan(0);
       expect(result.summary?.languages).toBeDefined();
@@ -40,66 +45,11 @@ describe('Performance Features (v0.1.1)', () => {
       expect(jsonSize).toBeLessThan(1000); // Less than 1KB
     });
 
-    it('should filter packages by regex pattern', async () => {
-      const result = await scanPackagesTool({ filter: '^@types/', limit: 100 });
-
-      expect(result.success).toBe(true);
-      const packageNames = Object.keys(result.packages);
-
-      // All packages should start with @types/
-      for (const name of packageNames) {
-        expect(name).toMatch(/^@types\//);
-      }
-    });
-
-    it('should filter packages by category', async () => {
-      const result = await scanPackagesTool({ category: 'development', limit: 100 });
-
-      expect(result.success).toBe(true);
-      const packages = Object.values(result.packages);
-
-      // All packages should be development dependencies
-      for (const pkg of packages) {
-        if (pkg.category) {
-          expect(pkg.category).toBe('development');
-        }
-      }
-    });
-
-    it('should filter packages by group', async () => {
-      const result = await scanPackagesTool({ group: 'testing', limit: 100 });
-
-      expect(result.success).toBe(true);
-      const packageNames = Object.keys(result.packages);
-
-      // Should contain testing-related packages
-      const hasTestingPackages = packageNames.some(
-        (name) =>
-          name.includes('vitest') ||
-          name.includes('jest') ||
-          name.includes('mocha') ||
-          name.includes('chai'),
-      );
-      expect(hasTestingPackages).toBe(true);
-    });
-
-    it('should exclude @types packages when requested', async () => {
-      const result = await scanPackagesTool({ includeTypes: false, limit: 100 });
-
-      expect(result.success).toBe(true);
-      const packageNames = Object.keys(result.packages);
-
-      // No packages should start with @types/
-      for (const name of packageNames) {
-        expect(name).not.toMatch(/^@types\//);
-      }
-    });
-
     it('should use relative paths to save tokens', async () => {
-      const result = await scanPackagesTool({ limit: 10 });
+      const result = await scanPackagesTool({ scope: 'project' });
 
       expect(result.success).toBe(true);
-      const packages = Object.values(result.packages);
+      const packages = Object.values(result.packages ?? {});
 
       // All locations should be relative paths
       for (const pkg of packages) {
@@ -109,26 +59,6 @@ describe('Performance Features (v0.1.1)', () => {
         expect(pkg.location).not.toContain('C:\\');
       }
     });
-
-    it('should combine multiple filters effectively', async () => {
-      const result = await scanPackagesTool({
-        filter: 'eslint',
-        category: 'development',
-        includeTypes: false,
-        limit: 20,
-      });
-
-      expect(result.success).toBe(true);
-      const packageNames = Object.keys(result.packages);
-
-      // All packages should match all criteria
-      for (const name of packageNames) {
-        expect(name.toLowerCase()).toContain('eslint');
-        expect(name).not.toMatch(/^@types\//);
-      }
-
-      expect(packageNames.length).toBeLessThanOrEqual(20);
-    });
   });
 
   describe('read-package lazy loading features', () => {
@@ -136,12 +66,12 @@ describe('Performance Features (v0.1.1)', () => {
     let testPackage: string | undefined = 'typescript';
 
     beforeAll(async () => {
-      const scanResult = await scanPackagesTool({ limit: 100 });
+      const scanResult = await scanPackagesTool({ scope: 'project' });
       // Try to find typescript, or use first available package
       testPackage =
-        Object.keys(scanResult.packages).find(
+        Object.keys(scanResult.packages ?? {}).find(
           (name) => name === 'typescript' || !name.startsWith('@types/'),
-        ) ?? Object.keys(scanResult.packages)[0];
+        ) ?? Object.keys(scanResult.packages ?? {})[0];
     });
 
     it('should return only main files by default (lazy loading)', async () => {
@@ -169,134 +99,18 @@ describe('Performance Features (v0.1.1)', () => {
         expect(jsonSize).toBeLessThan(10000); // Much smaller than full tree
       }
     });
-
-    it('should return full tree when requested', async () => {
-      if (!testPackage) {
-        console.warn('No test package available, skipping test');
-        return;
-      }
-
-      const result = await readPackageTool({
-        packageName: testPackage,
-        includeTree: true,
-      });
-
-      expect(result.success).toBe(true);
-      if (result.type === 'tree') {
-        // Should have more files than lazy mode
-        expect(result.fileTree.length).toBeGreaterThan(1);
-        expect(result.fileCount).toBeGreaterThan(0);
-      }
-    });
-
-    it('should respect maxDepth parameter', async () => {
-      const shallow = await readPackageTool({
-        packageName: 'typescript',
-        includeTree: true,
-        maxDepth: 1,
-      });
-
-      const deep = await readPackageTool({
-        packageName: 'typescript',
-        includeTree: true,
-        maxDepth: 3,
-      });
-
-      expect(shallow.success).toBe(true);
-      expect(deep.success).toBe(true);
-
-      if (shallow.type === 'tree' && deep.type === 'tree') {
-        // Shallow tree should have no nested paths
-        const shallowNested = shallow.fileTree.filter((f) => f.includes('/'));
-        expect(shallowNested.length).toBe(0);
-
-        // Deep tree should have at least as many files as shallow (could be equal if package is flat)
-        expect(deep.fileTree.length).toBeGreaterThanOrEqual(shallow.fileTree.length);
-
-        // Verify that the maxDepth parameter was processed (fileTree should reflect the constraint)
-        // Since TypeScript package might be flat, just verify the basic functionality
-        expect(shallow.fileTree).toBeDefined();
-        expect(deep.fileTree).toBeDefined();
-      }
-    });
-
-    it('should filter files by pattern', async () => {
-      if (!testPackage) {
-        console.warn('No test package available, skipping test');
-        return;
-      }
-
-      const result = await readPackageTool({
-        packageName: testPackage,
-        includeTree: true,
-        pattern: '*.json',
-      });
-
-      expect(result.success).toBe(true);
-      if (result.type === 'tree') {
-        // All files should end with .json
-        for (const file of result.fileTree) {
-          expect(file).toMatch(/\.json$/);
-        }
-      }
-    });
-
-    it('should handle complex glob patterns', async () => {
-      const result = await readPackageTool({
-        packageName: 'typescript',
-        includeTree: true,
-        pattern: 'lib/**',
-        maxDepth: 3,
-      });
-
-      // Skip test if package not found (might not be in limited scan)
-      if (result.type === 'error' && result.error?.includes('not found')) {
-        console.warn('Skipping test: typescript package not found in cache');
-        return;
-      }
-      expect(result.success).toBe(true);
-      if (result.type === 'tree') {
-        // All files should be in lib directory
-        for (const file of result.fileTree) {
-          expect(file).toMatch(/^lib/);
-        }
-      }
-    });
-
-    it('should indicate when tree is truncated', async () => {
-      // This test assumes typescript has many files
-      const result = await readPackageTool({
-        packageName: 'typescript',
-        includeTree: true,
-        maxDepth: 5,
-      });
-
-      // Skip test if package not found (might not be in limited scan)
-      if (result.type === 'error' && result.error?.includes('not found')) {
-        console.warn('Skipping test: typescript package not found in cache');
-        return;
-      }
-      expect(result.success).toBe(true);
-      if (result.type === 'tree') {
-        // If there are many files, truncated should be true
-        if (result.fileCount && result.fileCount > 200) {
-          expect(result.truncated).toBe(true);
-        }
-      }
-    });
   });
 
   describe('Token efficiency measurements', () => {
     it('should achieve significant token reduction with filters', async () => {
       // Get a regular package scan
       const regular = await scanPackagesTool({
-        limit: 10,
-        summary: false,
+        scope: 'project', // Project scope returns packages
       });
 
       // Summary scan should be much smaller
       const summary = await scanPackagesTool({
-        summary: true,
+        scope: 'all', // All scope returns summary by default
       });
 
       const regularSize = JSON.stringify(regular).length;
@@ -305,8 +119,8 @@ describe('Performance Features (v0.1.1)', () => {
       // Summary should be significantly smaller (more flexible threshold)
       expect(summarySize).toBeLessThan(regularSize);
 
-      // Summary should have empty packages object
-      expect(summary.packages).toEqual({});
+      // Summary should not have packages field (intentionally undefined)
+      expect(summary.packages).toBeUndefined();
       expect(summary.summary).toBeDefined();
       expect(summary.summary?.total).toBeGreaterThan(0);
 
@@ -315,47 +129,36 @@ describe('Performance Features (v0.1.1)', () => {
       expect(reduction).toBeGreaterThan(50); // At least 50% reduction (more realistic)
     });
 
-    it('should demonstrate efficiency benefits of lazy loading', async () => {
-      const lazy = await readPackageTool({
+    it('should return package information efficiently', async () => {
+      const result = await readPackageTool({
         packageName: 'typescript',
-      });
-
-      const full = await readPackageTool({
-        packageName: 'typescript',
-        includeTree: true,
-        maxDepth: 3,
       });
 
       // Skip test if package not found (might not be in limited scan)
-      if (
-        (lazy.type === 'error' && lazy.error?.includes('not found')) ||
-        (full.type === 'error' && full.error?.includes('not found'))
-      ) {
+      if (result.type === 'error' && result.error?.includes('not found')) {
         console.warn('Skipping test: typescript package not found in cache');
         return;
       }
-      expect(lazy.success).toBe(true);
-      expect(full.success).toBe(true);
+      expect(result.success).toBe(true);
 
-      if (lazy.type === 'tree' && full.type === 'tree') {
-        // Lazy loading should return fewer files in the tree
-        expect(lazy.fileTree.length).toBeLessThanOrEqual(full.fileTree.length);
+      if (result.type === 'tree') {
+        // Should have fileCount metadata
+        expect(result.fileCount).toBeDefined();
 
-        // Both should have fileCount metadata
-        expect(lazy.fileCount).toBeDefined();
-        expect(full.fileCount).toBeDefined();
+        // Should have mainFiles
+        expect(result.mainFiles).toBeDefined();
 
-        // Both should have mainFiles
-        expect(lazy.mainFiles).toBeDefined();
-        expect(full.mainFiles).toBeDefined();
-
-        // Lazy should include main files (with null check)
-        if (lazy.mainFiles) {
-          expect(lazy.mainFiles.length).toBeGreaterThan(0);
+        // Should include main files (with null check)
+        if (result.mainFiles) {
+          expect(result.mainFiles.length).toBeGreaterThan(0);
         }
 
-        // Verify core functionality without console output
-        expect(lazy.fileTree.length).toBeLessThanOrEqual(full.fileTree.length);
+        // Should have unified content
+        expect(result.initContent).toBeDefined();
+
+        // Should have a reasonable file tree
+        expect(result.fileTree).toBeDefined();
+        expect(result.fileTree.length).toBeGreaterThan(0);
       }
     });
   });

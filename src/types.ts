@@ -1,45 +1,13 @@
 import { z } from 'zod';
 
-// Package metadata
-export type PackageInfo = {
-  name: string;
-  version: string;
-  location: string;
-  language: 'python' | 'javascript';
-  packageManager?: string | undefined;
-  category?: 'production' | 'development' | undefined;
-  relevanceScore?: number;
-  popularityScore?: number;
-  fileCount?: number;
-  sizeBytes?: number;
-  mainFile?: string;
-  hasTypes?: boolean;
-  isDirectDependency?: boolean;
-};
+// Import shared types from scanners to avoid duplication
+export type { EnvironmentInfo, ScanResult } from '#scanners/types.js';
 
-// Environment information
-export type EnvironmentInfo = {
-  type: 'venv' | '.venv' | 'conda' | 'system' | 'npm' | 'pnpm' | 'yarn';
-  path: string;
-  pythonVersion?: string | undefined;
-  nodeVersion?: string | undefined;
-  packageManager?: string | undefined;
-  scanDurationMs?: number;
-};
+// PackageInfo removed - use BasicPackageInfo from scanners/types.ts instead
 
-// Scan result
-export type ScanResult = {
-  success: boolean;
-  packages: Record<string, PackageInfo>;
-  environment: EnvironmentInfo;
-  scanTime: string;
-  summary?: {
-    total: number;
-    filtered: number;
-    languages: Record<string, number>;
-    categories?: Record<string, number>;
-  };
-};
+// EnvironmentInfo is now imported from scanners/types.ts to avoid duplication
+
+// ScanResult is now imported from scanners/types.ts to avoid duplication
 
 // Read package result
 export type ReadPackageResult =
@@ -60,6 +28,7 @@ export type ReadPackageResult =
       package: string;
       filePath: string;
       content: string;
+      extractedSummary?: boolean;
     }
   | {
       type: 'error';
@@ -68,110 +37,54 @@ export type ReadPackageResult =
       suggestion?: string;
     };
 
-// Index file structure
-export const IndexFileSchema = z.object({
-  version: z.string(),
-  lastUpdated: z.string().datetime(),
-  environment: z.object({
-    type: z.enum(['venv', '.venv', 'conda', 'system', 'npm', 'pnpm', 'yarn']),
-    path: z.string(),
-    pythonVersion: z.string().optional(),
-    nodeVersion: z.string().optional(),
-    packageManager: z.string().optional(),
-  }),
-  packages: z.record(
-    z.string(),
-    z.object({
-      name: z.string(),
-      version: z.string(),
-      location: z.string(),
-      language: z.enum(['python', 'javascript']),
-      packageManager: z.string().optional(),
-    }),
-  ),
-});
+// IndexFileSchema removed - no longer used since we moved to SQLite cache
 
-export type IndexFile = z.infer<typeof IndexFileSchema>;
+// Tool parameters - Simplified API v2.0
 
-// Tool parameters
+// Minimal scan-packages parameters
 export const ScanPackagesParamsSchema = z.object({
-  forceRefresh: z.boolean().optional().default(false),
-  filter: z.string().optional().describe('Regex pattern to filter package names'),
-  limit: z.number().optional().default(50).describe('Maximum number of packages to return'),
-  summary: z.boolean().optional().default(false).describe('Return only summary counts'),
-  category: z
-    .enum(['production', 'development', 'all'])
+  scope: z
+    .enum(['all', 'project'])
     .optional()
     .default('all')
-    .describe('Filter by package category'),
-  includeTypes: z.boolean().optional().default(true).describe('Include @types packages'),
-  group: z
-    .enum(['testing', 'building', 'linting', 'typescript', 'framework', 'utility'])
-    .optional()
-    .describe('Filter by predefined package group'),
+    .describe('Scan all packages or only project dependencies'),
+  forceRefresh: z.boolean().optional().default(false).describe('Force rescan even if cached'),
 });
 
 export type ScanPackagesParams = z.infer<typeof ScanPackagesParamsSchema>;
 
+// Minimal read-package parameters
 export const ReadPackageParamsSchema = z.object({
-  packageName: z.string().min(1),
-  filePath: z.string().optional(),
-  includeTree: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe('Include full file tree (default: false, only main files)'),
-  maxDepth: z.number().optional().default(2).describe('Maximum depth for file tree traversal'),
-  pattern: z.string().optional().describe('Glob pattern to filter files (e.g., "*.ts", "src/**")'),
+  packageName: z.string().min(1).describe('Name of the package to read'),
 });
 
 export type ReadPackageParams = z.infer<typeof ReadPackageParamsSchema>;
 
-// Scanner interfaces
+// Legacy parameter schemas for backward compatibility (deprecated)
+export const LegacyScanPackagesParamsSchema = z.object({
+  forceRefresh: z.boolean().optional(),
+  filter: z.string().optional(),
+  limit: z.number().optional(),
+  summary: z.boolean().optional(),
+  category: z.enum(['production', 'development', 'all']).optional(),
+  includeTypes: z.boolean().optional(),
+  group: z
+    .enum(['testing', 'building', 'linting', 'typescript', 'framework', 'utility'])
+    .optional(),
+  includeContent: z.boolean().optional(),
+});
 
-/**
- * Core scanner interface that all language scanners must implement
- */
-export interface Scanner {
-  scan(): Promise<ScanResult>;
-  getPackageLocation(packageName: string): Promise<string | null>;
-  getPackageVersion(packageName: string): Promise<string | null>;
-  getEnvironmentInfo(): Promise<EnvironmentInfo>;
-}
+export type LegacyScanPackagesParams = z.infer<typeof LegacyScanPackagesParamsSchema>;
 
-/**
- * Extended scanner capabilities for language-specific features
- */
-export interface LanguageScanner extends Scanner {
-  /** The language this scanner supports */
-  readonly language: 'python' | 'javascript' | 'go' | 'rust' | 'java';
+export const LegacyReadPackageParamsSchema = z.object({
+  packageName: z.string().min(1),
+  filePath: z.string().optional(),
+  includeTree: z.boolean().optional(),
+  maxDepth: z.number().optional(),
+  pattern: z.string().optional(),
+});
 
-  /** Supported package managers for this language */
-  readonly supportedPackageManagers: readonly string[];
-
-  /** File extensions this language uses */
-  readonly supportedExtensions: readonly string[];
-
-  /** Check if this scanner can handle the given directory */
-  canHandle(basePath: string): Promise<boolean>;
-
-  /** Get the main/entry file for a package (language-specific) */
-  getPackageMainFile?(packageName: string): Promise<string | null>;
-}
-
-/**
- * Package manager specific capabilities
- */
-export interface PackageManagerScanner {
-  /** Detect which package manager is being used */
-  detectPackageManager(): Promise<string | null>;
-
-  /** Get lock file path if it exists */
-  getLockFilePath?(): Promise<string | null>;
-
-  /** Check if dependencies are installed */
-  isDependenciesInstalled(): Promise<boolean>;
-}
+export type LegacyReadPackageParams = z.infer<typeof LegacyReadPackageParamsSchema>;
 
 // Error types
 export class McpError extends Error {
@@ -186,18 +99,14 @@ export class McpError extends Error {
 }
 
 export class EnvironmentNotFoundError extends McpError {
-  constructor(message = 'No virtual environment found') {
-    super(message, 'ENV_NOT_FOUND', 'Run "python -m venv .venv" to create a virtual environment');
-  }
-}
-
-export class NodeEnvironmentNotFoundError extends McpError {
-  constructor(message = 'No Node.js project found') {
-    super(
-      message,
-      'NODE_ENV_NOT_FOUND',
-      'Ensure package.json exists and run "npm install" to install dependencies',
-    );
+  constructor(language: 'python' | 'javascript' = 'python') {
+    const message =
+      language === 'python' ? 'No virtual environment found' : 'No Node.js project found';
+    const suggestion =
+      language === 'python'
+        ? 'Run "python -m venv .venv" to create a virtual environment'
+        : 'Ensure package.json exists and run "npm install" to install dependencies';
+    super(message, 'ENV_NOT_FOUND', suggestion);
   }
 }
 
@@ -226,19 +135,7 @@ export interface SQLiteCacheConfig {
   enableFileCache: boolean;
 }
 
-export interface CacheEnvironment {
-  id: number;
-  partitionKey: string;
-  projectPath: string;
-  language: 'python' | 'javascript';
-  packageManager?: string;
-  lastScan: Date;
-  scanDurationMs?: number;
-  metadata: EnvironmentInfo;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
+// CacheEnvironment removed - use EnvironmentRow instead
 
 // Database row types for better-sqlite3
 export interface EnvironmentRow {
@@ -261,16 +158,8 @@ export interface PackageRow {
   version: string;
   location: string;
   language: string;
-  category: string | null;
-  relevance_score: number;
-  popularity_score: number;
-  file_count: number | null;
-  size_bytes: number | null;
-  main_file: string | null;
-  has_types: number;
-  is_direct_dependency: number;
-  metadata: Buffer;
+  has_type_definitions: number;
+  unified_content: Buffer;
   created_at: string;
   updated_at: string;
-  similarity_score?: number;
 }

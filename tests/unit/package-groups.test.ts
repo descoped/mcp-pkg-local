@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isInGroup, getPackageGroups } from '#utils/package-groups';
+import { isInGroup } from '#utils/package-groups.js';
 
 describe('Package Groups', () => {
   describe('isInGroup', () => {
@@ -55,31 +55,6 @@ describe('Package Groups', () => {
       expect(isInGroup('uuid', 'utility')).toBe(true);
       expect(isInGroup('chalk', 'utility')).toBe(true);
       expect(isInGroup('react', 'utility')).toBe(false);
-    });
-  });
-
-  describe('getPackageGroups', () => {
-    it('should return all groups a package belongs to', () => {
-      const zodGroups = getPackageGroups('zod');
-      expect(zodGroups).toContain('typescript');
-
-      const eslintGroups = getPackageGroups('eslint');
-      expect(eslintGroups).toContain('linting');
-
-      const viteGroups = getPackageGroups('vite');
-      expect(viteGroups).toContain('building');
-    });
-
-    it('should return empty array for unknown packages', () => {
-      const groups = getPackageGroups('some-unknown-package-xyz');
-      expect(groups).toEqual([]);
-    });
-
-    it('should handle packages that belong to multiple groups', () => {
-      // Some packages might belong to multiple groups
-      // For example, joi is in both typescript (for validation) and utility
-      const joiGroups = getPackageGroups('joi');
-      expect(joiGroups.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

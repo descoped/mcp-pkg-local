@@ -150,3 +150,17 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+
+# Temporary files
+test_eslint_check.js
+test-uv-fix.js
+test-temp-*/
+
+# Py
+**/venv/
+**/.venv/
+
+# Output directory for test artifacts and temporary files
+output/
+!output/.gitkeep
+

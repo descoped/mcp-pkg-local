@@ -1,12 +1,28 @@
 #!/usr/bin/env node
 import { startServer } from '#server';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+interface PackageJson {
+  version: string;
+  [key: string]: unknown;
+}
+
+// Get package.json version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8'),
+) as PackageJson;
+const version = packageJson.version;
 
 // Handle command-line flags
 const args = process.argv.slice(2);
 
 if (args.includes('--version') || args.includes('-v')) {
   // eslint-disable-next-line no-console
-  console.log('0.1.0');
+  console.log(version);
   process.exit(0);
 }
 

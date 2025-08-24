@@ -1,11 +1,11 @@
-import { PythonScanner } from '#scanners/python';
-import { NodeJSScanner } from '#scanners/nodejs';
-import type { LanguageScanner } from '#types';
+import { PythonScanner } from '#scanners/python.js';
+import { NodeJSScanner } from '#scanners/nodejs.js';
+import type { IPackageScanner } from '#scanners/types.js';
 
 /**
  * Registry of available scanners
  */
-const SCANNERS: Array<new (basePath: string) => LanguageScanner> = [NodeJSScanner, PythonScanner];
+const SCANNERS = [NodeJSScanner, PythonScanner] as const;
 
 /**
  * Detects the project type and creates the appropriate scanner
@@ -14,7 +14,7 @@ const SCANNERS: Array<new (basePath: string) => LanguageScanner> = [NodeJSScanne
  */
 export async function detectAndCreateScanner(
   basePath: string = process.cwd(),
-): Promise<LanguageScanner> {
+): Promise<IPackageScanner> {
   // Try each scanner in order
   for (const ScannerClass of SCANNERS) {
     const scanner = new ScannerClass(basePath);
@@ -22,11 +22,11 @@ export async function detectAndCreateScanner(
       console.error(
         `[SCAN] Detected ${scanner.language} project (${scanner.supportedPackageManagers.join('/')} support)`,
       );
-      return scanner;
+      return scanner as IPackageScanner;
     }
   }
 
   // Default to Python scanner for backward compatibility
   console.error('[SCAN] No specific environment detected, defaulting to Python scanner');
-  return new PythonScanner(basePath);
+  return new PythonScanner(basePath) as IPackageScanner;
 }

@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { NodeJSScanner } from '#scanners/nodejs';
-import { scanPackagesTool } from '#tools/scan-packages';
-import { readPackageTool } from '#tools/read-package';
-import { join } from 'node:path';
-import { promises as fs } from 'node:fs';
+import { NodeJSScanner } from '#scanners/nodejs.js';
+import { scanPackagesTool } from '#tools/scan-packages.js';
+import { readPackageTool } from '#tools/read-package.js';
 
 describe('Node.js Environment Integration', () => {
   const projectRoot = process.cwd(); // Use current project as test subject
@@ -26,7 +24,7 @@ describe('Node.js Environment Integration', () => {
 
     it('should find common Node.js packages', async () => {
       const result = await scanner.scan();
-      const packageNames = Object.keys(result.packages);
+      const packageNames = Object.keys(result.packages ?? {});
 
       // eslint-disable-next-line no-console
       console.log(`Found packages: ${packageNames.slice(0, 10).join(', ')} ...`);
@@ -46,7 +44,7 @@ describe('Node.js Environment Integration', () => {
 
     it('should handle scoped packages', async () => {
       const result = await scanner.scan();
-      const packageNames = Object.keys(result.packages);
+      const packageNames = Object.keys(result.packages ?? {});
 
       // Check for scoped packages
       const scopedPackages = packageNames.filter((name) => name.startsWith('@'));
@@ -70,37 +68,21 @@ describe('Node.js Environment Integration', () => {
       expect(version).toBeTruthy();
       expect(version).toMatch(/^\d+\.\d+\.\d+/); // Semantic version
     });
-
-    it('should detect main entry file', async () => {
-      const mainFile = await scanner.getPackageMainFile('typescript');
-      expect(mainFile).toBeTruthy();
-
-      // TypeScript's main file should exist
-      const location = await scanner.getPackageLocation('typescript');
-      if (location && mainFile) {
-        const mainPath = join(location, mainFile);
-        const exists = await fs
-          .access(mainPath)
-          .then(() => true)
-          .catch(() => false);
-        expect(exists).toBe(true);
-      }
-    });
   });
 
   describe('scan-packages tool', () => {
     it('should scan Node.js packages successfully', async () => {
-      const result = await scanPackagesTool({ forceRefresh: true, limit: 500 }); // Use higher limit for testing
+      const result = await scanPackagesTool({ forceRefresh: true, scope: 'project' }); // Use project scope to get packages field
 
       expect(result.success).toBe(true);
       expect(result.environment.type).toMatch(/npm|pnpm|yarn/);
       expect(result.environment.nodeVersion).toBeTruthy();
 
-      const packageCount = Object.keys(result.packages).length;
-      expect(packageCount).toBeGreaterThan(50);
+      const packageCount = Object.keys(result.packages ?? {}).length;
+      expect(packageCount).toBeGreaterThan(5); // Lowered from 50 since project scope filters to only direct dependencies
 
       // Verify package structure
-      const firstPackage = Object.values(result.packages)[0];
+      const firstPackage = Object.values(result.packages ?? {})[0];
       expect(firstPackage).toHaveProperty('name');
       expect(firstPackage).toHaveProperty('version');
       expect(firstPackage).toHaveProperty('location');
@@ -111,10 +93,10 @@ describe('Node.js Environment Integration', () => {
   describe('read-package tool', () => {
     it('should read package file tree', async () => {
       // First scan to ensure cache with higher limit to include the test package
-      const scanResult = await scanPackagesTool({ forceRefresh: true, limit: 500 });
+      const scanResult = await scanPackagesTool({ forceRefresh: true, scope: 'all' });
 
       // Get the first available package from scan
-      const packageName = Object.keys(scanResult.packages)[0];
+      const packageName = Object.keys(scanResult.packages ?? {})[0];
       if (!packageName) {
         console.warn('No packages found in scan, skipping test');
         return;
@@ -133,20 +115,20 @@ describe('Node.js Environment Integration', () => {
         // Should have package.json as init content for Node packages
         expect(result.initContent).toBeTruthy();
         if (result.initContent) {
-          const parsed = JSON.parse(result.initContent) as { name: string };
-          expect(parsed.name).toBe(packageName);
+          // initContent is now markdown, not JSON
+          expect(result.initContent).toContain(`name: ${packageName}`);
         }
       }
     });
 
     it('should read specific file from package', async () => {
       // First scan to ensure cache with higher limit to include the test package
-      const scanResult = await scanPackagesTool({ forceRefresh: true, limit: 500 });
+      const scanResult = await scanPackagesTool({ forceRefresh: true, scope: 'all' });
 
       // Get a package that likely has package.json
       const packageName =
-        Object.keys(scanResult.packages).find((name) => !name.startsWith('@types/')) ??
-        Object.keys(scanResult.packages)[0];
+        Object.keys(scanResult.packages ?? {}).find((name) => !name.startsWith('@types/')) ??
+        Object.keys(scanResult.packages ?? {})[0];
 
       if (!packageName) {
         console.warn('No packages found in scan, skipping test');
