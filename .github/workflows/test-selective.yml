@@ -46,7 +46,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
         if: contains(fromJSON('["all", "integration", "bottles", "bottles-integration", "slow"]'), github.event.inputs.test_type)
 
       - name: Install uv (Python package manager)
